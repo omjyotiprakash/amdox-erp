@@ -1,11 +1,11 @@
 import React from 'react'
 
-const Payables = () => {
+const Users = () => {
   return (
     <div>
-      Payables
+      Users
     </div>
   )
 }
 
-export default Payables
+export default Users
