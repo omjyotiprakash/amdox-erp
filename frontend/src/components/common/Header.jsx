@@ -1,7 +1,16 @@
-import { useState } from "react"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const Header = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <header className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
@@ -56,11 +65,20 @@ const Header = () => {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">
-              Administrator
+              {user?.name || "Administrator"}
             </p>
-            <p className="text-xs text-slate-500">System Admin</p>
+            <p className="text-xs text-slate-500">
+              {user?.email || "System Admin"}
+            </p>
           </div>
         </div>
+        <button
+  type="button"
+  onClick={handleLogout}
+  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+>
+  Logout
+</button>
       </div>
     </header>
   )
