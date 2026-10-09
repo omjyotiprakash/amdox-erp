@@ -1,3 +1,4 @@
+
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
@@ -5,21 +6,22 @@ import Footer from "./Footer";
 const Layout = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-50 md:flex">
-      <Sidebar/>
+      <Sidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-
-        <div className="flex min-h-[calc(100vh-80px)] flex-col">
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        
+        <main className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8">
+          <div className="flex-1">
             {children}
-          </main>
+          </div>
+        </main>
 
-          <Footer />
-        </div>
+      <Footer />
+
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

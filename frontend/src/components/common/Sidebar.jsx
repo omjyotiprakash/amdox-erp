@@ -1,14 +1,29 @@
 import { NavLink } from "react-router-dom"
 
+
 const navigation = [
-  { name: "Dashboard", path: "/", icon: "▦" },
-  { name: "Finance", path: "/finance/ledger", icon: "₹" },
-  { name: "Human Resources", path: "/hr/employees", icon: "♙" },
-  { name: "Supply Chain", path: "/supply-chain/inventory", icon: "⇄" },
-  { name: "Projects", path: "/projects", icon: "▤" },
-  { name: "Reports", path: "/reports", icon: "▥" },
-  { name: "Settings", path: "/settings/general", icon: "⚙" },
-]
+  { name: "Dashboard", path: "/" },
+  { name: "Ledger", path: "/finance/ledger" },
+  { name: "Payables", path: "/finance/payables" },
+  { name: "Receivables", path: "/finance/receivables" },
+  { name: "Human Resources", path: "/hr/employees" },
+  { name: "Attendance", path: "/hr/attendance" },
+  { name: "Leave Management", path: "/hr/leave" },
+  { name: "Payroll", path: "/hr/payroll" },
+  { name: "Supply Chain", path: "/supply-chain/inventory" },
+  { name: "Vendors", path: "/supply-chain/vendors" },
+  { name: "Purchase Orders", path: "/supply-chain/purchase-orders" },
+  { name: "Forecasting", path: "/supply-chain/forecasting" },
+  { name: "Projects", path: "/projects" },
+  { name: "Reports", path: "/reports" },
+  { name: "Settings", path: "/settings/general" },
+  { name: "Project Details", path: "/projects/details" },
+  { name: "Resource Planning", path: "/projects/resources" },
+  { name: "Integrations", path: "/settings/integrations" },
+  { name: "Roles & Permissions", path: "/settings/roles" },
+  { name: "User Management", path: "/settings/users" },
+];
+
 
 
 
@@ -29,7 +44,7 @@ const Sidebar = () => {
           <NavLink
             key={item.name}
             to={item.path}
-            end={item.path === "/"}
+            end={true}
             className={({ isActive }) =>
               `flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${
                 isActive
