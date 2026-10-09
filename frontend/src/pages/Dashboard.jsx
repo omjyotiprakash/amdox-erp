@@ -80,7 +80,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-700 p-6 text-white shadow-sm sm:p-8">
+      <section className="rounded-2xl bg-linear-to-r from-blue-700 to-indigo-700 p-6 text-white shadow-sm sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-wider text-blue-100">
           Your workspace
         </p>
