@@ -22,3 +22,16 @@ body::-webkit-scrollbar{
     height: 0;
   }
 }
+
+
+/* Hide scrollbars across all screen sizes */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
