@@ -1,9 +1,19 @@
-import React from 'react'
+import LoginForm from "../components/Auth/LoginForm"
+import Navbar from "../components/common/Navbar"
+import Footer from "../components/common/Footer"
 
 const Login = () => {
   return (
-    <div>
-      Login
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <Navbar />
+
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <LoginForm />
+        </div>
+      </main>
+
+      <Footer />
     </div>
   )
 }

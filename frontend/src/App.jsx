@@ -1,11 +1,27 @@
-import React from 'react'
+import { Routes, Route } from "react-router-dom";
+import Layout from "./components/common/Layout";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Error from "./pages/Error";
+import NotFound from "./pages/NotFound";
 
 const App = () => {
   return (
-    <div>
-      App
-    </div>
-  )
-}
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <Layout>
+            <Dashboard />
+          </Layout>
+        }
+      />
 
-export default App
+      <Route path="/login" element={<Login />} />
+      <Route path="/error" element={<Error />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
+export default App;
