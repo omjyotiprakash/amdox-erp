@@ -15,6 +15,7 @@ import Employees from "./pages/HR/Employees";
 import Inventory from "./pages/SupplyChain/Inventory";
 import ProjectsList from "./pages/Projects/ProjectsList";
 import General from "./pages/Settings/General";
+import FinanceReports from "./pages/Finance/Reports";
 
 const App = () => {
   return (
@@ -38,6 +39,11 @@ const App = () => {
         <Route
           path="/finance/ledger"
           element={<Layout><Ledger /></Layout>}
+        />
+
+        <Route
+          path="/reports"
+          element={<Layout><FinanceReports /></Layout>}
         />
 
         <Route
