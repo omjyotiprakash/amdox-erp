@@ -1,7 +1,11 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginForm = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -19,13 +23,16 @@ const LoginForm = () => {
   }
 
   const handleSubmit = (event) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    // Backend authentication will be connected here later.
-    console.log("Login form submitted", {
-      email: formData.email,
-    })
-  }
+  // Demo only: this does not verify credentials.
+  login({
+    email: formData.email,
+    name: formData.email.split("@")[0],
+  });
+
+  navigate("/");
+};
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">

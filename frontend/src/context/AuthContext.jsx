@@ -1,11 +1,38 @@
-import React from 'react'
+import { createContext, useContext, useState } from "react"
 
-const AuthContext = () => {
+const AuthContext = createContext(null)
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null)
+
+  const login = (userData) => {
+    setUser(userData);
+  }
+
+  const logout = () => {
+    setUser(null);
+  }
+
   return (
-    <div>
-      AuthContext
-    </div>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: Boolean(user),
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   )
 }
 
-export default AuthContext
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return context
+}

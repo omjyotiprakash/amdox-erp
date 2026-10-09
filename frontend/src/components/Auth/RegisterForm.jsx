@@ -1,7 +1,10 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,27 +26,31 @@ const RegisterForm = () => {
     setError("")
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  
+const handleSubmit = (event) => {
+  event.preventDefault();
+  setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.")
-      return
-    }
-
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long.")
-      return
-    }
-
-    // Backend registration will be connected here later.
-    console.log("Registration form submitted", {
-      name: formData.name,
-      email: formData.email,
-    })
-
-    setError("Registration is not connected to the server yet.")
+  if (formData.password !== formData.confirmPassword) {
+    setError("Passwords do not match.");
+    return;
   }
+
+  if (formData.password.length < 8) {
+    setError("Password must be at least 8 characters long.");
+    return;
+  }
+
+  // Temporary frontend-only registration.
+  // This does not save the account to the backend.
+  login({
+    name: formData.name,
+    email: formData.email,
+  });
+
+  navigate("/");
+};
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
