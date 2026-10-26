@@ -12,6 +12,8 @@ const LoginForm = () => {
   })
 
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -20,19 +22,24 @@ const LoginForm = () => {
       ...previous,
       [name]: value,
     }))
+
+    setError("")
   }
 
-  const handleSubmit = (event) => {
-  event.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
 
-  // Demo only: this does not verify credentials.
-  login({
-    email: formData.email,
-    name: formData.email.split("@")[0],
-  });
-
-  navigate("/");
-};
+    try {
+      await login(formData);
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
@@ -100,11 +107,21 @@ const LoginForm = () => {
             />
           </div>
 
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"
+            >
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={submitting}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign In
+            {submitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
 

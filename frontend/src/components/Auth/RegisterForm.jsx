@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 
 const RegisterForm = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,6 +14,7 @@ const RegisterForm = () => {
 
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -27,29 +28,35 @@ const RegisterForm = () => {
   }
 
   
-const handleSubmit = (event) => {
-  event.preventDefault();
-  setError("");
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
 
-  if (formData.password !== formData.confirmPassword) {
-    setError("Passwords do not match.");
-    return;
-  }
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
-  if (formData.password.length < 8) {
-    setError("Password must be at least 8 characters long.");
-    return;
-  }
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
 
-  // Temporary frontend-only registration.
-  // This does not save the account to the backend.
-  login({
-    name: formData.name,
-    email: formData.email,
-  });
+    setSubmitting(true);
 
-  navigate("/");
-};
+    try {
+      await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
 
   return (
@@ -172,9 +179,10 @@ const handleSubmit = (event) => {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={submitting}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create Account
+            {submitting ? "Creating account..." : "Create Account"}
           </button>
         </form>
 

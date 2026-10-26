@@ -1,0 +1,27 @@
+require("dotenv").config();
+
+const required = (name, fallback) => {
+  const value = process.env[name] ?? fallback;
+  if (value === undefined || value === "") {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+};
+
+const nodeEnv = process.env.NODE_ENV || "development";
+const isProduction = nodeEnv === "production";
+
+module.exports = {
+  nodeEnv,
+  isProduction,
+  port: Number(process.env.PORT) || 5000,
+  mongoUri: required("MONGODB_URI", isProduction ? undefined : "mongodb://127.0.0.1:27017/amdox_erp"),
+  // No dev fallback in production: a guessable secret would let anyone forge tokens.
+  jwtSecret: required("JWT_SECRET", isProduction ? undefined : "dev-only-insecure-secret-change-me"),
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
+  bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 12,
+  corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+};
