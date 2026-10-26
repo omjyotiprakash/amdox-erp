@@ -27,6 +27,9 @@ router.use("/supply-chain/forecasting", require("./supplyChain/forecastingRoutes
 router.use("/projects/resources", require("./project/resourceRoutes"));
 router.use("/projects", require("./project/projectRoutes"));
 
+// Self-service for any signed-in person
+router.use("/me", require("./meRoutes"));
+
 // Dashboard and notifications
 router.use("/dashboard", require("./dashboard/dashboardRoutes"));
 router.use("/notifications", require("./notification/notificationRoutes"));

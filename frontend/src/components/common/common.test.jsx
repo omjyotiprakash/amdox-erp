@@ -166,6 +166,7 @@ describe("Sidebar", () => {
     renderSidebar();
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My Profile" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Projects" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Vendors" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ledger" })).not.toBeInTheDocument();
@@ -177,13 +178,13 @@ describe("Sidebar", () => {
   it("shows everything to a role with every module", () => {
     mockAuth = { user: { role: roleWith(["finance", "hr", "supplyChain", "projects", "reports", "settings"]) } };
     renderSidebar();
-    expect(screen.getAllByRole("link")).toHaveLength(21);
+    expect(screen.getAllByRole("link")).toHaveLength(22);
     expect(screen.getByRole("link", { name: "Audit Log" })).toBeInTheDocument();
   });
 
-  it("falls back to the dashboard alone when permissions are unknown", () => {
+  it("falls back to the Dashboard and My Profile when permissions are unknown", () => {
     mockAuth = { user: null };
     renderSidebar();
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["Dashboard", "My Profile"]);
   });
 });

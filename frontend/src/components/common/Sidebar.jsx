@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 // "module" is the permission a user's role needs (view) for the link to be shown.
 const navigation = [
   { name: "Dashboard", path: "/" },
+  { name: "My Profile", path: "/me" },
   { name: "Ledger", path: "/finance/ledger", module: "finance" },
   { name: "Payables", path: "/finance/payables", module: "finance" },
   { name: "Receivables", path: "/finance/receivables", module: "finance" },

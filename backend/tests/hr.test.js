@@ -1,5 +1,6 @@
 process.env.AUTH_RATE_LIMIT = "1000";
 process.env.BCRYPT_ROUNDS = "4";
+process.env.ALLOW_PUBLIC_REGISTRATION = "true"; // these tests create users by self-registering
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");

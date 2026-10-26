@@ -18,6 +18,7 @@ administration in one web app.
 | Supply Chain | Inventory with stock status, vendors, purchase orders with a forward-only status flow, rule-based demand forecast |
 | Projects | Projects with budgets and milestones, resource planning that caps each person at 100% |
 | Settings | Company settings, integrations, roles and permissions, user accounts, audit log |
+| My Profile | Self-service for every signed-in person: own details, attendance, leave requests, payslips |
 
 ## Run it locally
 
@@ -37,8 +38,17 @@ npm install
 npm run dev                 # http://localhost:5173
 ```
 
-Open the app and register. **The first account created becomes the Admin.** Everyone after that is
-created by an Admin under Settings > User Management.
+Open the app and register. **The first account created becomes the Admin, and sign-up then closes.**
+Everyone after that is created by an Admin under Settings > User Management (set `ALLOW_PUBLIC_REGISTRATION=true`
+only if you really want anyone to be able to sign up).
+
+## Who can see what
+
+- **Roles** decide what each person can do in each area. Create your own under Settings > Roles & Permissions
+  (for example "HR Staff" with only Human Resources), then give people that role when you add them.
+- **My Profile** is open to everyone who signs in. It shows only their own details, attendance, leave
+  requests (they can request and cancel their own) and payslips. It finds a person's HR record by **email**:
+  add the person in the Employee Directory using the same email they sign in with.
 
 ## Tests
 
