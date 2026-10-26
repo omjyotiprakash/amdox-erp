@@ -26,10 +26,11 @@ Every route except `/health`, `/auth/register` and `/auth/login` needs `Authoriz
 | Projects | `/projects`, `/projects/:id/milestones`, `/projects/resources` | `projects` |
 | Dashboard | `GET /dashboard/summary` | any signed-in user (filtered by role) |
 | Notifications | `GET /notifications` | any signed-in user (filtered by role) |
+| Self-service | `/me/profile`, `/me/attendance`, `/me/leave`, `/me/payslips` | any signed-in user (own record only) |
 | Settings | `/settings/general`, `/settings/integrations`, `/settings/roles`, `/settings/users` | `settings` |
 
-The first account registered becomes Admin; later self-registrations get the least-privileged Employee role.
-Admins create further users and manage roles under Settings.
+The first account registered becomes Admin and sign-up then closes (`GET /auth/registration` reports whether it is open).
+Admins create further users and manage roles under Settings. A login is linked to its HR employee record by matching email.
 
 ## Protecting a route
 

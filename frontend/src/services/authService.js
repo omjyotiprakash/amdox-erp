@@ -17,4 +17,7 @@ export const fetchCurrentUser = async () => (await api.get("/auth/me")).user;
 export const changePassword = async ({ currentPassword, newPassword }) =>
   startSession(await api.post("/auth/change-password", { currentPassword, newPassword }));
 
+// Is public sign-up still open? It is only open until the first (Admin) account exists.
+export const fetchRegistrationOpen = async () => (await api.get("/auth/registration", { auth: false })).open;
+
 export const logout = () => setToken(null);

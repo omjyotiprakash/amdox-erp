@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { fetchRegistrationOpen } from "../../services/authService";
 
 const RegisterForm = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  // null = still checking, false = closed
+  const [registrationOpen, setRegistrationOpen] = useState(null);
+
+  useEffect(() => {
+    fetchRegistrationOpen().then(setRegistrationOpen).catch(() => setRegistrationOpen(true));
+  }, []);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -58,6 +65,23 @@ const RegisterForm = () => {
     }
   };
 
+
+  if (registrationOpen === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl sm:p-8">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sign-up is closed</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            Accounts are created by your administrator. Ask them to add you, then sign in with the email and
+            password they give you.
+          </p>
+          <Link to="/login" className="mt-6 inline-block font-semibold text-blue-600 hover:text-blue-700">
+            Go to sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">

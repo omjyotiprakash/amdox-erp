@@ -21,6 +21,9 @@ module.exports = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
   // Behind a hosting proxy (Render, Vercel) the real client IP is in X-Forwarded-For.
   trustProxy: process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) : isProduction ? 1 : false,
+  // Public sign-up is closed once the first (Admin) account exists. Set to "true" only if you really
+  // want anyone to be able to create an Employee account themselves.
+  allowPublicRegistration: process.env.ALLOW_PUBLIC_REGISTRATION === "true",
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 12,
   corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:5173")
     .split(",")

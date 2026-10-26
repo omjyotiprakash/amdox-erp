@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { fetchRegistrationOpen } from "../../services/authService";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -12,6 +13,12 @@ const LoginForm = () => {
   })
 
   const [showPassword, setShowPassword] = useState(false)
+  const [registrationOpen, setRegistrationOpen] = useState(false)
+
+  // Only offer "Create account" while sign-up is open (before the first Admin exists).
+  useEffect(() => {
+    fetchRegistrationOpen().then(setRegistrationOpen).catch(() => setRegistrationOpen(false));
+  }, []);
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
@@ -126,13 +133,19 @@ const LoginForm = () => {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-semibold text-blue-600 hover:text-blue-700"
-          >
-            Create account
-          </Link>
+          {registrationOpen ? (
+            <>
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="font-semibold text-blue-600 hover:text-blue-700"
+              >
+                Create account
+              </Link>
+            </>
+          ) : (
+            "Need an account? Ask your administrator to create one for you."
+          )}
         </p>
 
         <p className="mt-8 text-center text-xs text-slate-400">

@@ -14,14 +14,20 @@ const signToken = (user) =>
     expiresIn: env.jwtExpiresIn,
   });
 
+// Sign-up is open only to bootstrap the first Admin (or if explicitly enabled by the operator).
+const registrationOpen = async () => env.allowPublicRegistration || !(await User.exists({}));
+
 const register = async ({ name, email, password }) => {
+  // The very first account bootstraps the system as Admin; everyone after is a least-privilege Employee.
+  const isFirstUser = !(await User.exists({}));
+  if (!isFirstUser && !env.allowPublicRegistration) {
+    throw new AppError(403, "Sign-up is closed. Ask your administrator to create an account for you.");
+  }
   if (await User.exists({ email })) {
     throw new AppError(409, "An account with this email already exists");
   }
 
   await Role.ensureDefaults();
-  // The very first account bootstraps the system as Admin; everyone after is a least-privilege Employee.
-  const isFirstUser = !(await User.exists({}));
   const role = await Role.findOne({ name: isFirstUser ? "Admin" : "Employee" });
 
   const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
@@ -55,4 +61,4 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
   return { user, token: signToken(user) };
 };
 
-module.exports = { register, login, changePassword, signToken };
+module.exports = { register, registrationOpen, login, changePassword, signToken };

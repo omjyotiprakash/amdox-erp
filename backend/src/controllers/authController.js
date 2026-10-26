@@ -5,6 +5,10 @@ const register = async (req, res) => {
   res.status(201).json({ success: true, data: { user, token } });
 };
 
+const registration = async (_req, res) => {
+  res.json({ success: true, data: { open: await authService.registrationOpen() } });
+};
+
 const login = async (req, res) => {
   const { user, token } = await authService.login(req.body);
   res.json({ success: true, data: { user, token } });
@@ -19,4 +23,4 @@ const me = async (req, res) => {
   res.json({ success: true, data: { user: req.user } });
 };
 
-module.exports = { register, login, changePassword, me };
+module.exports = { register, registration, login, changePassword, me };

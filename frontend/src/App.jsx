@@ -31,6 +31,7 @@ import Integrations from "./pages/Settings/Integrations";
 import Roles from "./pages/Settings/Roles";
 import Users from "./pages/Settings/Users";
 import AuditLog from "./pages/Settings/AuditLog";
+import MyProfile from "./pages/MyProfile";
 
 const App = () => {
   return (
@@ -140,6 +141,11 @@ const App = () => {
         <Route
           path="/settings/users"
           element={<Layout><Users /></Layout>}
+        />
+
+        <Route
+          path="/me"
+          element={<Layout><MyProfile /></Layout>}
         />
 
         <Route
