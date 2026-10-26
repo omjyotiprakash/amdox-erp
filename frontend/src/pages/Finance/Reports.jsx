@@ -1,23 +1,9 @@
-
 import React, { useMemo, useState } from "react";
+import ErrorBanner from "../../components/common/ErrorBanner";
+import { useFetch } from "../../hooks/useFetch";
+import { fetchFinanceReport } from "../../services/financeService";
 
-const monthlyData = [
-  { month: "May", income: 42000, expenses: 28000 },
-  { month: "Jun", income: 48000, expenses: 31000 },
-  { month: "Jul", income: 45000, expenses: 29000 },
-  { month: "Aug", income: 56000, expenses: 36000 },
-  { month: "Sep", income: 52000, expenses: 34000 },
-  { month: "Oct", income: 65000, expenses: 39000 },
-];
-
-const transactions = [
-  { id: "TXN-1001", date: "2026-10-02", description: "Website Development", category: "Income", amount: 12500, status: "Completed" },
-  { id: "TXN-1002", date: "2026-10-03", description: "Office Rent", category: "Expense", amount: 8000, status: "Completed" },
-  { id: "TXN-1003", date: "2026-10-04", description: "Consulting Services", category: "Income", amount: 9500, status: "Pending" },
-  { id: "TXN-1004", date: "2026-10-05", description: "Software Subscription", category: "Expense", amount: 2400, status: "Completed" },
-  { id: "TXN-1005", date: "2026-10-06", description: "Product Sales", category: "Income", amount: 15000, status: "Completed" },
-  { id: "TXN-1006", date: "2026-10-07", description: "Marketing Campaign", category: "Expense", amount: 5200, status: "Pending" },
-];
+const PERIODS = { "3 months": 3, "6 months": 6, "12 months": 12 };
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -31,39 +17,41 @@ const Reports = () => {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
-      const matchesCategory =
-        category === "All" || transaction.category === category;
+  const { data, loading, error, reload } = useFetch(
+    () => fetchFinanceReport(PERIODS[period]),
+    [period]
+  );
 
+  const visibleMonths = useMemo(() => data?.months ?? [], [data]);
+  const transactions = useMemo(() => data?.transactions ?? [], [data]);
+
+  const filteredTransactions = useMemo(() => {
+    const term = search.toLowerCase();
+    return transactions.filter((transaction) => {
+      const matchesCategory = category === "All" || transaction.type === category;
       const matchesSearch =
-        transaction.description.toLowerCase().includes(search.toLowerCase()) ||
-        transaction.id.toLowerCase().includes(search.toLowerCase());
+        transaction.description.toLowerCase().includes(term) ||
+        transaction.code.toLowerCase().includes(term);
 
       return matchesCategory && matchesSearch;
     });
-  }, [category, search]);
+  }, [transactions, category, search]);
 
-  const visibleMonths =
-    period === "3 months" ? monthlyData.slice(-3) : monthlyData;
-
-  const totalIncome = visibleMonths.reduce((sum, item) => sum + item.income, 0);
-  const totalExpenses = visibleMonths.reduce(
-    (sum, item) => sum + item.expenses,
-    0
-  );
-  const netProfit = totalIncome - totalExpenses;
+  const totalIncome = data?.totals.income ?? 0;
+  const totalExpenses = data?.totals.expenses ?? 0;
+  const netProfit = data?.totals.net ?? 0;
   const maxValue = Math.max(
+    1,
     ...visibleMonths.flatMap((item) => [item.income, item.expenses])
   );
 
   const exportCSV = () => {
     const headers = ["Transaction ID", "Date", "Description", "Category", "Amount", "Status"];
     const rows = filteredTransactions.map((item) => [
-      item.id,
+      item.code,
       item.date,
       item.description,
-      item.category,
+      item.type,
       item.amount,
       item.status,
     ]);
@@ -113,6 +101,8 @@ const Reports = () => {
         </div>
       </div>
 
+      <ErrorBanner message={error} onRetry={reload} />
+
       {/* Period selector */}
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -129,6 +119,7 @@ const Reports = () => {
         >
           <option>3 months</option>
           <option>6 months</option>
+          <option>12 months</option>
         </select>
       </div>
 
@@ -191,7 +182,7 @@ const Reports = () => {
 
         <div className="flex h-64 items-end gap-3 border-b border-slate-200 pb-2 sm:gap-6">
           {visibleMonths.map((item) => (
-            <div key={item.month} className="flex h-full min-w-0 flex-1 items-end justify-center gap-1 sm:gap-2">
+            <div key={`${item.year}-${item.month}`} className="flex h-full min-w-0 flex-1 items-end justify-center gap-1 sm:gap-2">
               <div
                 title={`Revenue: ${formatCurrency(item.income)}`}
                 className="w-1/2 max-w-12 rounded-t-md bg-indigo-500 transition-all hover:bg-indigo-600"
@@ -208,7 +199,7 @@ const Reports = () => {
 
         <div className="mt-3 flex gap-3 sm:gap-6">
           {visibleMonths.map((item) => (
-            <p key={item.month} className="min-w-0 flex-1 text-center text-xs text-slate-500">
+            <p key={`${item.year}-${item.month}`} className="min-w-0 flex-1 text-center text-xs text-slate-500">
               {item.month}
             </p>
           ))}
@@ -267,7 +258,7 @@ const Reports = () => {
               {filteredTransactions.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="whitespace-nowrap px-5 py-4 font-medium text-indigo-600">
-                    {item.id}
+                    {item.code}
                   </td>
                   <td className="whitespace-nowrap px-5 py-4 text-slate-600">
                     {new Date(`${item.date}T00:00:00`).toLocaleDateString("en-IN")}
@@ -276,15 +267,15 @@ const Reports = () => {
                     {item.description}
                   </td>
                   <td className="whitespace-nowrap px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.category === "Income" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                      {item.category}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.type === "Income" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                      {item.type}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-800">
                     {formatCurrency(item.amount)}
                   </td>
                   <td className="whitespace-nowrap px-5 py-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.status === "Completed" ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700"}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.status === "Posted" ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700"}`}>
                       {item.status}
                     </span>
                   </td>
@@ -294,7 +285,11 @@ const Reports = () => {
               {filteredTransactions.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-5 py-10 text-center text-slate-500">
-                    No transactions match your search.
+                    {loading
+                      ? "Loading transactions..."
+                      : transactions.length
+                        ? "No transactions match your search."
+                        : "No transactions in this period."}
                   </td>
                 </tr>
               )}
@@ -303,12 +298,12 @@ const Reports = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-sm text-slate-500">
-          Showing {filteredTransactions.length} of {transactions.length} transactions
+          Showing {filteredTransactions.length} of {transactions.length} transactions in this period
         </div>
       </div>
 
       <p className="text-xs text-slate-400">
-        Demo data only. Reports will use actual company records after backend integration.
+        Totals and the chart include Posted transactions only; Pending ones are listed but not counted.
       </p>
     </div>
   );
