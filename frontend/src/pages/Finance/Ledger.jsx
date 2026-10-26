@@ -4,6 +4,7 @@ import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
 import { createTransaction, deleteTransaction, fetchLedger } from "../../services/financeService";
+import { localToday } from "../../utils/dateUtils";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -12,8 +13,6 @@ const formatCurrency = (amount) =>
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
   }).format(amount);
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 const formFields = [
   { name: "date", label: "Date", type: "date" },
@@ -217,7 +216,7 @@ const Ledger = () => {
           title="Add Transaction"
           submitLabel="Add Transaction"
           fields={formFields}
-          initialValues={{ date: today() }}
+          initialValues={{ date: localToday() }}
           onSubmit={async (values) => {
             await createTransaction(values);
             reload();
