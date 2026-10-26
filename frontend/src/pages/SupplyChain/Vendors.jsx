@@ -6,6 +6,7 @@ import { useFetch } from "../../hooks/useFetch";
 import { usePage } from "../../hooks/usePagination";
 import Pagination from "../../components/common/Pagination";
 import { createVendor, deleteVendor, fetchVendors, updateVendor } from "../../services/supplyChainService";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusStyle = {
   Active: "bg-emerald-50 text-emerald-700",
@@ -24,6 +25,7 @@ const vendorFields = [
 ];
 
 const Vendors = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -51,8 +53,8 @@ const Vendors = () => {
     }
   };
 
-  const handleDelete = (vendor) => {
-    if (!window.confirm(`Delete ${vendor.name} (${vendor.code})?`)) return;
+  const handleDelete = async (vendor) => {
+    if (!(await confirm({ title: "Delete vendor?", message: `Delete ${vendor.name} (${vendor.code})? This cannot be undone.`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => deleteVendor(vendor.id));
   };
 

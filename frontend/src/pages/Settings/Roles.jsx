@@ -4,6 +4,7 @@ import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
 import { createRole, deleteRole, fetchRoles, saveRolePermissions } from "../../services/settingsService";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const MODULE_LABELS = {
   dashboard: "Dashboard",
@@ -24,6 +25,7 @@ const countPermissions = (role) =>
   );
 
 const Roles = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -83,7 +85,7 @@ const Roles = () => {
   };
 
   const handleDelete = async (role) => {
-    if (!window.confirm(`Delete the ${role.name} role?`)) return;
+    if (!(await confirm({ title: "Delete role?", message: `Delete the ${role.name} role?`, confirmLabel: "Delete", danger: true }))) return;
     setActionError("");
     setMessage("");
     try {

@@ -7,6 +7,7 @@ import { usePage } from "../../hooks/usePagination";
 import Pagination from "../../components/common/Pagination";
 import { createLeave, decideLeave, deleteLeave, fetchEmployees, fetchLeave } from "../../services/hrService";
 import { localToday } from "../../utils/dateUtils";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const LEAVE_TYPES = ["Casual Leave", "Sick Leave", "Annual Leave", "Unpaid Leave"];
 
@@ -17,6 +18,7 @@ const statusClass = {
 };
 
 const Leave = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
@@ -47,8 +49,8 @@ const Leave = () => {
     }
   };
 
-  const handleDelete = (request) => {
-    if (!window.confirm(`Delete leave request ${request.code}?`)) return;
+  const handleDelete = async (request) => {
+    if (!(await confirm({ title: "Delete leave request?", message: `Delete leave request ${request.code}?`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => deleteLeave(request.id));
   };
 

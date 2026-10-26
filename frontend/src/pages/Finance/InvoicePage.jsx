@@ -5,6 +5,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
 import { usePage } from "../../hooks/usePagination";
 import Pagination from "../../components/common/Pagination";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -23,6 +24,7 @@ const statusClass = {
 // Shared screen for Accounts Payable and Accounts Receivable.
 // `config` supplies the wording and the API functions for one direction.
 const InvoicePage = ({ config }) => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
@@ -50,8 +52,8 @@ const InvoicePage = ({ config }) => {
 
   const handlePay = (invoice) => runAction(() => config.pay(invoice.id));
 
-  const handleDelete = (invoice) => {
-    if (!window.confirm(`Delete ${invoice.code} (${invoice.invoiceNumber})?`)) return;
+  const handleDelete = async (invoice) => {
+    if (!(await confirm({ title: "Delete invoice?", message: `Delete ${invoice.code} (${invoice.invoiceNumber})? This cannot be undone.`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => config.remove(invoice.id));
   };
 

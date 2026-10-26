@@ -12,6 +12,7 @@ import {
 } from "../services/selfService";
 import { localMonth, localToday } from "../utils/dateUtils";
 import { formatCurrency, formatDate } from "../utils/formatters";
+import { useConfirm } from "../context/ConfirmContext";
 
 const LEAVE_TYPES = ["Casual Leave", "Sick Leave", "Annual Leave", "Unpaid Leave"];
 
@@ -55,6 +56,7 @@ const display = (time) => {
 };
 
 const MyProfile = () => {
+  const confirm = useConfirm();
   const [month, setMonth] = useState(localMonth);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -69,7 +71,7 @@ const MyProfile = () => {
   const email = profile.data?.email;
 
   const cancel = async (request) => {
-    if (!window.confirm(`Cancel your ${request.type} request (${request.from} to ${request.to})?`)) return;
+    if (!(await confirm({ title: "Cancel this request?", message: `Cancel your ${request.type} request (${request.from} to ${request.to})?`, confirmLabel: "Cancel request", cancelLabel: "Keep it", danger: true }))) return;
     setActionError("");
     try {
       await cancelMyLeave(request.id);

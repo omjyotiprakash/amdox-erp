@@ -7,6 +7,7 @@ import { usePage } from "../../hooks/usePagination";
 import Pagination from "../../components/common/Pagination";
 import { createTransaction, deleteTransaction, fetchLedger } from "../../services/financeService";
 import { localToday } from "../../utils/dateUtils";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
@@ -26,6 +27,7 @@ const formFields = [
 ];
 
 const Ledger = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
@@ -42,7 +44,7 @@ const Ledger = () => {
   const summary = data?.summary ?? { income: 0, expenses: 0, net: 0 };
 
   const handleDelete = async (transaction) => {
-    if (!window.confirm(`Delete ${transaction.code} (${transaction.description})?`)) return;
+    if (!(await confirm({ title: "Delete transaction?", message: `Delete ${transaction.code} (${transaction.description})? This cannot be undone.`, confirmLabel: "Delete", danger: true }))) return;
     setActionError("");
     try {
       await deleteTransaction(transaction.id);
