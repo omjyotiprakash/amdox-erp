@@ -1,110 +1,91 @@
-
 import { useState } from "react";
-
-const transactions = [
-  {
-    id: "TXN-1001",
-    date: "2026-10-01",
-    description: "Office rent",
-    account: "Rent Expense",
-    type: "Expense",
-    amount: 25000,
-    status: "Posted",
-  },
-  {
-    id: "TXN-1002",
-    date: "2026-10-03",
-    description: "Client payment",
-    account: "Accounts Receivable",
-    type: "Income",
-    amount: 65000,
-    status: "Posted",
-  },
-  {
-    id: "TXN-1003",
-    date: "2026-10-05",
-    description: "Software subscription",
-    account: "Software Expense",
-    type: "Expense",
-    amount: 4500,
-    status: "Pending",
-  },
-  {
-    id: "TXN-1004",
-    date: "2026-10-07",
-    description: "Product sales",
-    account: "Sales Revenue",
-    type: "Income",
-    amount: 42000,
-    status: "Posted",
-  },
-];
+import ErrorBanner from "../../components/common/ErrorBanner";
+import FormModal from "../../components/common/FormModal";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useFetch } from "../../hooks/useFetch";
+import { createTransaction, deleteTransaction, fetchLedger } from "../../services/financeService";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
   }).format(amount);
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+const formFields = [
+  { name: "date", label: "Date", type: "date" },
+  { name: "description", label: "Description", placeholder: "e.g. Office rent" },
+  { name: "account", label: "Account", placeholder: "e.g. Rent Expense" },
+  { name: "type", label: "Type", type: "select", options: ["Income", "Expense"] },
+  { name: "amount", label: "Amount (INR)", type: "number" },
+  { name: "status", label: "Status", type: "select", options: ["Posted", "Pending"] },
+];
 
 const Ledger = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
+  const [showForm, setShowForm] = useState(false);
+  const [actionError, setActionError] = useState("");
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = [
-      transaction.id,
-      transaction.description,
-      transaction.account,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase());
+  const debouncedSearch = useDebounce(search);
+  const { data, loading, error, reload } = useFetch(
+    () => fetchLedger({ search: debouncedSearch, type: typeFilter }),
+    [debouncedSearch, typeFilter]
+  );
 
-    const matchesType =
-      typeFilter === "All" || transaction.type === typeFilter;
+  const transactions = data?.items ?? [];
+  const summary = data?.summary ?? { income: 0, expenses: 0, net: 0 };
 
-    return matchesSearch && matchesType;
-  });
-
-  const totalIncome = transactions
-    .filter((transaction) => transaction.type === "Income")
-    .reduce((total, transaction) => total + transaction.amount, 0);
-
-  const totalExpenses = transactions
-    .filter((transaction) => transaction.type === "Expense")
-    .reduce((total, transaction) => total + transaction.amount, 0);
+  const handleDelete = async (transaction) => {
+    if (!window.confirm(`Delete ${transaction.code} (${transaction.description})?`)) return;
+    setActionError("");
+    try {
+      await deleteTransaction(transaction.id);
+      reload();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
 
   const summaryCards = [
-    { title: "Total Income", amount: totalIncome, color: "text-emerald-600" },
-    { title: "Total Expenses", amount: totalExpenses, color: "text-red-600" },
-    {
-      title: "Net Balance",
-      amount: totalIncome - totalExpenses,
-      color: "text-blue-600",
-    },
+    { title: "Total Income", amount: summary.income, color: "text-emerald-600" },
+    { title: "Total Expenses", amount: summary.expenses, color: "text-red-600" },
+    { title: "Net Balance", amount: summary.net, color: "text-blue-600" },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            General Ledger
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">General Ledger</h1>
           <p className="mt-1 text-sm text-slate-500">
             Review and search your financial transactions.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Print Ledger
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Add Transaction
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Print Ledger
+          </button>
+        </div>
       </div>
+
+      <ErrorBanner message={error} onRetry={reload} />
+      <ErrorBanner message={actionError} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map((card) => (
@@ -157,18 +138,19 @@ const Ledger = () => {
                 <th className="px-5 py-3">Type</th>
                 <th className="px-5 py-3 text-right">Amount</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Action</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredTransactions.map((transaction) => (
+              {transactions.map((transaction) => (
                 <tr key={transaction.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <p className="font-medium text-slate-900">
                       {transaction.description}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {transaction.id}
+                      {transaction.code}
                     </p>
                   </td>
                   <td className="whitespace-nowrap px-5 py-4 text-slate-600">
@@ -194,16 +176,29 @@ const Ledger = () => {
                   <td className="px-5 py-4 text-slate-600">
                     {transaction.status}
                   </td>
+                  <td className="px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(transaction)}
+                      className="whitespace-nowrap font-medium text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
 
-              {filteredTransactions.length === 0 && (
+              {transactions.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-5 py-10 text-center text-slate-500"
                   >
-                    No transactions match your search.
+                    {loading
+                      ? "Loading transactions..."
+                      : data?.total
+                        ? "No transactions match your search."
+                        : "No transactions yet. Click Add Transaction to create the first one."}
                   </td>
                 </tr>
               )}
@@ -212,10 +207,24 @@ const Ledger = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-          Showing {filteredTransactions.length} of {transactions.length} sample
-          transactions
+          Showing {transactions.length} of {data?.total ?? 0} transactions. Totals
+          include Posted transactions only.
         </div>
       </section>
+
+      {showForm && (
+        <FormModal
+          title="Add Transaction"
+          submitLabel="Add Transaction"
+          fields={formFields}
+          initialValues={{ date: today() }}
+          onSubmit={async (values) => {
+            await createTransaction(values);
+            reload();
+          }}
+          onClose={() => setShowForm(false)}
+        />
+      )}
     </div>
   );
 };
