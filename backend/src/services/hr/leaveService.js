@@ -7,9 +7,23 @@ const { matchingIds } = require("./employeeService");
 const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const POPULATE = { path: "employee", select: "code name department" };
+const POPULATE = { path: "employee", select: "code name department email" };
 
-const list = async ({ search, status, page, limit }) => {
+// Nobody approves their own work. Returns the reason a person may not decide a request, or null if they may.
+//  - never your own leave (the employee record that matches your login email)
+//  - not a request you added yourself, unless you are an Admin (who often enters leave on staff's behalf)
+const decisionBlockedReason = (leave, user) => {
+  if (!user) return null;
+  if (leave.employee?.email && leave.employee.email === user.email) {
+    return "You cannot approve or reject your own leave. Ask another approver.";
+  }
+  if (leave.createdBy && String(leave.createdBy) === String(user._id) && user.role?.name !== "Admin") {
+    return "You added this request, so someone else needs to approve it.";
+  }
+  return null;
+};
+
+const list = async ({ search, status, page, limit }, user) => {
   const paging = parsePaging({ page, limit });
   const filter = {};
   if (status && status !== "All") filter.status = status;
@@ -30,7 +44,11 @@ const list = async ({ search, status, page, limit }) => {
   const matching = await Leave.countDocuments(filter);
 
   return {
-    items,
+    // Tell the page, per request, whether this user may approve or reject it.
+    items: items.map((leave) => {
+      const blockedReason = leave.status === "Pending" ? decisionBlockedReason(leave, user) : null;
+      return { ...leave.toJSON(), canDecide: leave.status === "Pending" && !blockedReason, blockedReason };
+    }),
     ...pageInfo(paging, matching),
     total,
     summary: {
@@ -72,10 +90,16 @@ const create = async ({ employeeId, type, from, to, reason }, userId) => {
 };
 
 // Only a Pending request can be decided, and only once.
-const decide = async (id, status, userId) => {
+const decide = async (id, status, user) => {
+  const existing = await Leave.findById(id).populate(POPULATE);
+  if (!existing) throw new AppError(404, "Leave request not found");
+
+  const blocked = decisionBlockedReason(existing, user);
+  if (blocked) throw new AppError(403, blocked);
+
   const leave = await Leave.findOneAndUpdate(
     { _id: id, status: "Pending" },
-    { status, decidedBy: userId, decidedAt: new Date() },
+    { status, decidedBy: user._id, decidedAt: new Date() },
     { returnDocument: "after" }
   ).populate(POPULATE);
   if (leave) return leave;

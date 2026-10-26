@@ -178,20 +178,29 @@ const Leave = () => {
                   <td className="whitespace-nowrap px-5 py-4">
                     {request.status === "Pending" ? (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => runAction(() => decideLeave(request.id, "Approved"))}
-                          className="font-medium text-emerald-600 hover:text-emerald-800"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => runAction(() => decideLeave(request.id, "Rejected"))}
-                          className="ml-3 font-medium text-red-600 hover:text-red-800"
-                        >
-                          Reject
-                        </button>
+                        {request.canDecide ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => runAction(() => decideLeave(request.id, "Approved"))}
+                              className="font-medium text-emerald-600 hover:text-emerald-800"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => runAction(() => decideLeave(request.id, "Rejected"))}
+                              className="ml-3 font-medium text-red-600 hover:text-red-800"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        ) : (
+                          // You can't approve your own work: say why instead of offering a button that would be refused.
+                          <span className="inline-block max-w-56 align-middle text-xs italic text-slate-500" title={request.blockedReason || ""}>
+                            {request.blockedReason || "Awaiting an approver"}
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDelete(request)}

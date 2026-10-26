@@ -2,7 +2,7 @@ const leaveService = require("../../services/hr/leaveService");
 
 const list = async (req, res) => {
   const { search, status, page, limit } = req.query;
-  res.json({ success: true, data: await leaveService.list({ search, status, page, limit }) });
+  res.json({ success: true, data: await leaveService.list({ search, status, page, limit }, req.user) });
 };
 
 const create = async (req, res) => {
@@ -11,7 +11,7 @@ const create = async (req, res) => {
 };
 
 const decide = async (req, res) => {
-  const leave = await leaveService.decide(req.params.id, req.body.status, req.user._id);
+  const leave = await leaveService.decide(req.params.id, req.body.status, req.user);
   res.json({ success: true, data: { leave } });
 };
 
