@@ -1,12 +1,20 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationContext";
+
+const levelDot = {
+  danger: "bg-red-500",
+  warning: "bg-amber-500",
+  info: "bg-blue-500",
+};
 
 const Header = ({ onMenuClick }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { items: notifications, count: notificationCount, reload: reloadNotifications } = useNotifications();
 
   const handleLogout = () => {
     logout();
@@ -51,7 +59,10 @@ const Header = ({ onMenuClick }) => {
         <div className="relative">
           <button
             type="button"
-            onClick={() => setNotificationsOpen(!notificationsOpen)}
+            onClick={() => {
+              if (!notificationsOpen) reloadNotifications();
+              setNotificationsOpen(!notificationsOpen);
+            }}
             aria-expanded={notificationsOpen}
             aria-label="Toggle notifications"
             className="relative rounded-xl border border-slate-200 p-3 text-slate-600 transition hover:bg-slate-50"
@@ -69,17 +80,38 @@ const Header = ({ onMenuClick }) => {
                 d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-4-5.7V5a2 2 0 10-4 0v.3A6 6 0 006 11v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 01-6 0"
               />
             </svg>
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+            {notificationCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white">
+                {notificationCount}
+              </span>
+            )}
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+            <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
               <h2 className="font-semibold text-slate-900">
                 Notifications
               </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                You're all caught up. Notifications will appear here.
-              </p>
+              {notifications.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">
+                  You're all caught up. Nothing needs your attention.
+                </p>
+              ) : (
+                <ul className="mt-3 max-h-80 space-y-1 overflow-y-auto">
+                  {notifications.map((notification) => (
+                    <li key={notification.id}>
+                      <Link
+                        to={notification.link}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="flex items-start gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${levelDot[notification.level]}`} />
+                        <span>{notification.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
