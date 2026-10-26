@@ -117,7 +117,7 @@ const App = () => {
         />
 
         <Route
-          path="/projects/details"
+          path="/projects/details/:id?"
           element={<Layout><ProjectDetail /></Layout>}
         />
         

@@ -2,6 +2,7 @@ const Employee = require("../../models/hr/Employee");
 const Attendance = require("../../models/hr/Attendance");
 const Leave = require("../../models/hr/Leave");
 const Payroll = require("../../models/hr/Payroll");
+const Assignment = require("../../models/project/Resource");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
@@ -72,9 +73,10 @@ const remove = async (id) => {
     Attendance.exists({ employee: id }),
     Leave.exists({ employee: id }),
     Payroll.exists({ employee: id }),
+    Assignment.exists({ employee: id }),
   ]);
   if (hasHistory.some(Boolean)) {
-    throw new AppError(409, "This employee has attendance, leave or payroll records. Set the status to Inactive instead.");
+    throw new AppError(409, "This employee has attendance, leave, payroll or project records. Set the status to Inactive instead.");
   }
   const employee = await Employee.findByIdAndDelete(id);
   if (!employee) throw new AppError(404, "Employee not found");

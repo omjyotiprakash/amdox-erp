@@ -1,16 +1,4 @@
-import api from "./api";
-
-// Builds "?a=1&b=2", skipping empty values and the "All" filter placeholder.
-const query = (params = {}) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "" && value !== "All") {
-      search.set(key, value);
-    }
-  });
-  const text = search.toString();
-  return text ? `?${text}` : "";
-};
+import api, { query } from "./api";
 
 // Employees
 export const fetchEmployees = (params) => api.get(`/hr/employees${query(params)}`);

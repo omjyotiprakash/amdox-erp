@@ -1,76 +1,17 @@
-
 import { useState } from "react";
-
-const initialOrders = [
-  {
-    id: "PO-2026-001",
-    vendor: "TechSource India",
-    date: "2026-10-02",
-    deliveryDate: "2026-10-15",
-    items: 12,
-    amount: 185000,
-    status: "Approved",
-  },
-  {
-    id: "PO-2026-002",
-    vendor: "Office Essentials",
-    date: "2026-10-04",
-    deliveryDate: "2026-10-18",
-    items: 8,
-    amount: 72000,
-    status: "Pending",
-  },
-  {
-    id: "PO-2026-003",
-    vendor: "Digital Components Co.",
-    date: "2026-10-05",
-    deliveryDate: "2026-10-12",
-    items: 20,
-    amount: 95000,
-    status: "Delivered",
-  },
-  {
-    id: "PO-2026-004",
-    vendor: "Workspace Solutions",
-    date: "2026-10-06",
-    deliveryDate: "2026-10-20",
-    items: 15,
-    amount: 54000,
-    status: "Ordered",
-  },
-  {
-    id: "PO-2026-005",
-    vendor: "Global Packaging",
-    date: "2026-10-08",
-    deliveryDate: "2026-10-25",
-    items: 30,
-    amount: 38000,
-    status: "Cancelled",
-  },
-  {
-    id: "PO-2026-006",
-    vendor: "TechSource India",
-    date: "2026-10-09",
-    deliveryDate: "2026-10-22",
-    items: 10,
-    amount: 125000,
-    status: "Pending",
-  },
-];
-
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-
-const formatDate = (date) =>
-  new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+import ErrorBanner from "../../components/common/ErrorBanner";
+import FormModal from "../../components/common/FormModal";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useFetch } from "../../hooks/useFetch";
+import {
+  createPurchaseOrder,
+  deletePurchaseOrder,
+  fetchPurchaseOrders,
+  fetchVendors,
+  setPurchaseOrderStatus,
+} from "../../services/supplyChainService";
+import { localToday } from "../../utils/dateUtils";
+import { formatCurrency, formatDate } from "../../utils/formatters";
 
 const statusStyles = {
   Pending: "bg-amber-50 text-amber-700",
@@ -80,139 +21,111 @@ const statusStyles = {
   Cancelled: "bg-red-50 text-red-700",
 };
 
+// Mirrors the server: where an order may go next. Delivered and Cancelled are final.
+const NEXT_STATUSES = {
+  Pending: ["Approved", "Cancelled"],
+  Approved: ["Ordered", "Cancelled"],
+  Ordered: ["Delivered", "Cancelled"],
+  Delivered: [],
+  Cancelled: [],
+};
+
 const PurchaseOrders = () => {
-  const [orders, setOrders] = useState(initialOrders);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [vendorFilter, setVendorFilter] = useState("All");
+  const [showForm, setShowForm] = useState(false);
+  const [actionError, setActionError] = useState("");
 
-  const totalValue = orders
-    .filter((order) => order.status !== "Cancelled")
-    .reduce((sum, order) => sum + order.amount, 0);
+  const debouncedSearch = useDebounce(search);
+  const { data, loading, error, reload } = useFetch(
+    () => fetchPurchaseOrders({ search: debouncedSearch, status: statusFilter, vendorId: vendorFilter }),
+    [debouncedSearch, statusFilter, vendorFilter]
+  );
+  const { data: vendorData } = useFetch(() => fetchVendors({}), []);
 
-  const pendingCount = orders.filter(
-    (order) => order.status === "Pending"
-  ).length;
+  const orders = data?.items ?? [];
+  const totals = data?.summary ?? { total: 0, totalValue: 0, pending: 0, delivered: 0 };
+  const allVendors = vendorData?.items ?? [];
+  const activeVendorOptions = allVendors
+    .filter((vendor) => vendor.status === "Active")
+    .map((vendor) => ({ value: vendor.id, label: vendor.name }));
 
-  const approvedCount = orders.filter(
-    (order) => order.status === "Approved"
-  ).length;
+  const runAction = async (action) => {
+    setActionError("");
+    try {
+      await action();
+      reload();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
 
-  const deliveredCount = orders.filter(
-    (order) => order.status === "Delivered"
-  ).length;
-
-  const vendors = [...new Set(orders.map((order) => order.vendor))];
-
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch = `${order.id} ${order.vendor}`
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "All" || order.status === statusFilter;
-
-    const matchesVendor =
-      vendorFilter === "All" || order.vendor === vendorFilter;
-
-    return matchesSearch && matchesStatus && matchesVendor;
-  });
-
-  const updateStatus = (id, status) => {
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === id ? { ...order, status } : order
-      )
-    );
+  const handleDelete = (order) => {
+    if (!window.confirm(`Delete purchase order ${order.code}?`)) return;
+    runAction(() => deletePurchaseOrder(order.id));
   };
 
   const summary = [
-    {
-      title: "Total Purchase Orders",
-      value: orders.length,
-      color: "text-blue-600",
-    },
-    {
-      title: "Total Order Value",
-      value: formatCurrency(totalValue),
-      color: "text-violet-600",
-    },
-    {
-      title: "Awaiting Approval",
-      value: pendingCount,
-      color: "text-amber-600",
-    },
-    {
-      title: "Delivered Orders",
-      value: deliveredCount,
-      color: "text-emerald-600",
-    },
+    { title: "Total Purchase Orders", value: totals.total, color: "text-blue-600" },
+    { title: "Total Order Value", value: formatCurrency(totals.totalValue), color: "text-emerald-600" },
+    { title: "Awaiting Approval", value: totals.pending, color: "text-amber-600" },
+    { title: "Delivered Orders", value: totals.delivered, color: "text-violet-600" },
+  ];
+
+  const formFields = [
+    { name: "vendorId", label: "Vendor", type: "select", options: activeVendorOptions },
+    { name: "orderDate", label: "Order date", type: "date" },
+    { name: "deliveryDate", label: "Expected delivery", type: "date" },
+    { name: "items", label: "Number of items", type: "number", step: "1", min: "1" },
+    { name: "amount", label: "Order amount (INR)", type: "number" },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Purchase Orders
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">Purchase Orders</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Track supplier orders, approvals, and expected deliveries.
+            Track vendor orders, delivery dates, and order status.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Print Orders
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            disabled={activeVendorOptions.length === 0}
+            title={activeVendorOptions.length === 0 ? "Add an Active vendor first" : undefined}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            New Purchase Order
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Print Orders
+          </button>
+        </div>
       </div>
 
+      <ErrorBanner message={error} onRetry={reload} />
+      <ErrorBanner message={actionError} />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <p className="text-sm text-slate-500">{item.title}</p>
-            <p className={`mt-3 text-2xl font-bold ${item.color}`}>
-              {item.value}
-            </p>
+        {summary.map((card) => (
+          <div key={card.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">{card.title}</p>
+            <p className={`mt-3 text-2xl font-bold ${card.color}`}>{card.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Approved Orders</p>
-          <p className="mt-2 text-2xl font-bold text-blue-600">
-            {approvedCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Active Order Value</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {formatCurrency(
-              orders
-                .filter(
-                  (order) =>
-                    order.status !== "Cancelled" &&
-                    order.status !== "Delivered"
-                )
-                .reduce((sum, order) => sum + order.amount, 0)
-            )}
-          </p>
-        </div>
-      </div>
-
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="space-y-4 border-b border-slate-200 p-5">
-          <h2 className="font-semibold text-slate-900">
-            Purchase Order Register
-          </h2>
+          <h2 className="font-semibold text-slate-900">Order Directory</h2>
 
           <div className="grid gap-3 md:grid-cols-3">
             <input
@@ -227,27 +140,27 @@ const PurchaseOrders = () => {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              aria-label="Filter by order status"
+              aria-label="Filter orders by status"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             >
               <option value="All">All statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Ordered">Ordered</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
+              {Object.keys(NEXT_STATUSES).map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
             </select>
 
             <select
               value={vendorFilter}
               onChange={(event) => setVendorFilter(event.target.value)}
-              aria-label="Filter by vendor"
+              aria-label="Filter orders by vendor"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             >
               <option value="All">All vendors</option>
-              {vendors.map((vendor) => (
-                <option key={vendor} value={vendor}>
-                  {vendor}
+              {allVendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
                 </option>
               ))}
             </select>
@@ -270,68 +183,65 @@ const PurchaseOrders = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-5 py-4 font-medium text-blue-600">
-                    {order.id}
-                  </td>
-
-                  <td className="whitespace-nowrap px-5 py-4 text-slate-700">
-                    {order.vendor}
-                  </td>
-
-                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                    {formatDate(order.date)}
-                  </td>
-
-                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                    {formatDate(order.deliveryDate)}
-                  </td>
-
-                  <td className="px-5 py-4 text-slate-600">
-                    {order.items}
-                  </td>
-
+                  <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-900">{order.code}</td>
+                  <td className="px-5 py-4 text-slate-600">{order.vendor?.name}</td>
+                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">{formatDate(order.orderDate)}</td>
+                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">{formatDate(order.deliveryDate)}</td>
+                  <td className="px-5 py-4 text-slate-600">{order.items}</td>
                   <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-900">
                     {formatCurrency(order.amount)}
                   </td>
-
                   <td className="px-5 py-4">
                     <span
-                      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${
-                        statusStyles[order.status]
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[order.status]}`}
                     >
                       {order.status}
                     </span>
                   </td>
-
-                  <td className="px-5 py-4">
-                    <select
-                      value={order.status}
-                      onChange={(event) =>
-                        updateStatus(order.id, event.target.value)
-                      }
-                      aria-label={`Update status for ${order.id}`}
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-500"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Ordered">Ordered</option>
-                      <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
+                  <td className="whitespace-nowrap px-5 py-4">
+                    {NEXT_STATUSES[order.status].length > 0 ? (
+                      <select
+                        value=""
+                        onChange={(event) =>
+                          event.target.value &&
+                          runAction(() => setPurchaseOrderStatus(order.id, event.target.value))
+                        }
+                        aria-label={`Update ${order.code} status`}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs outline-none focus:border-blue-500"
+                      >
+                        <option value="">Move to...</option>
+                        {NEXT_STATUSES[order.status].map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-slate-400">Final</span>
+                    )}
+                    {order.status === "Pending" && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(order)}
+                        className="ml-3 font-medium text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
 
-              {filteredOrders.length === 0 && (
+              {orders.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    No purchase orders match your search or filters.
+                  <td colSpan={8} className="px-5 py-10 text-center text-slate-500">
+                    {loading
+                      ? "Loading purchase orders..."
+                      : data?.total
+                        ? "No purchase orders match your search or filters."
+                        : "No purchase orders yet. Add an Active vendor, then create the first order."}
                   </td>
                 </tr>
               )}
@@ -340,9 +250,23 @@ const PurchaseOrders = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-          Showing {filteredOrders.length} of {orders.length} sample orders
+          Showing {orders.length} of {data?.total ?? 0} purchase orders. Cancelled orders are not counted in the total value.
         </div>
       </section>
+
+      {showForm && (
+        <FormModal
+          title="New Purchase Order"
+          submitLabel="Create Order"
+          fields={formFields}
+          initialValues={{ orderDate: localToday(), deliveryDate: localToday(), items: "1" }}
+          onSubmit={async (values) => {
+            await createPurchaseOrder(values);
+            reload();
+          }}
+          onClose={() => setShowForm(false)}
+        />
+      )}
     </div>
   );
 };

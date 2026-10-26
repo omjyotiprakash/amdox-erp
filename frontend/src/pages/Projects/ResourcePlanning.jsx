@@ -1,212 +1,69 @@
-
 import { useState } from "react";
+import ErrorBanner from "../../components/common/ErrorBanner";
+import FormModal from "../../components/common/FormModal";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useFetch } from "../../hooks/useFetch";
+import { assignResource, fetchResources, unassignResource } from "../../services/projectService";
 
-const initialResources = [
-  {
-    id: "RES-1001",
-    name: "Rahul Sharma",
-    role: "Project Manager",
-    department: "Management",
-    project: "ERP Platform Development",
-    allocation: 80,
-    hours: 32,
-    status: "Available",
-  },
-  {
-    id: "RES-1002",
-    name: "Priya Das",
-    role: "Frontend Developer",
-    department: "Engineering",
-    project: "ERP Platform Development",
-    allocation: 100,
-    hours: 40,
-    status: "Fully Allocated",
-  },
-  {
-    id: "RES-1003",
-    name: "Amit Kumar",
-    role: "Backend Developer",
-    department: "Engineering",
-    project: "Inventory Automation",
-    allocation: 75,
-    hours: 30,
-    status: "Available",
-  },
-  {
-    id: "RES-1004",
-    name: "Sneha Patel",
-    role: "UI/UX Designer",
-    department: "Design",
-    project: "Employee Portal",
-    allocation: 50,
-    hours: 20,
-    status: "Available",
-  },
-  {
-    id: "RES-1005",
-    name: "Arjun Singh",
-    role: "QA Engineer",
-    department: "Quality Assurance",
-    project: "Supplier Integration",
-    allocation: 100,
-    hours: 40,
-    status: "Fully Allocated",
-  },
-  {
-    id: "RES-1006",
-    name: "Neha Mishra",
-    role: "Business Analyst",
-    department: "Management",
-    project: "Unassigned",
-    allocation: 0,
-    hours: 0,
-    status: "Unassigned",
-  },
-];
+const statusStyle = (allocation) => {
+  if (allocation === 0) return "bg-amber-50 text-amber-700";
+  if (allocation >= 100) return "bg-violet-50 text-violet-700";
+  return "bg-emerald-50 text-emerald-700";
+};
 
-const projects = [
-  "ERP Platform Development",
-  "Inventory Automation",
-  "Employee Portal",
-  "Supplier Integration",
-  "Analytics Dashboard",
-  "Unassigned",
-];
-
-const formatHours = (hours) => `${hours} hrs/week`;
-
-const getStatus = (allocation) => {
-  if (allocation === 0) return "Unassigned";
-  if (allocation >= 100) return "Fully Allocated";
-  return "Available";
+const allocationStyle = (allocation) => {
+  if (allocation >= 100) return "bg-violet-600";
+  if (allocation >= 75) return "bg-blue-600";
+  if (allocation > 0) return "bg-emerald-500";
+  return "bg-slate-300";
 };
 
 const ResourcePlanning = () => {
-  const [resources, setResources] = useState(initialResources);
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [editingResource, setEditingResource] = useState(null);
+  const [assigning, setAssigning] = useState(null); // the resource row being assigned
+  const [actionError, setActionError] = useState("");
 
-  const allocatedCount = resources.filter(
-    (resource) => resource.allocation > 0
-  ).length;
-
-  const availableCount = resources.filter(
-    (resource) =>
-      resource.allocation > 0 && resource.allocation < 100
-  ).length;
-
-  const unassignedCount = resources.filter(
-    (resource) => resource.allocation === 0
-  ).length;
-
-  const totalWeeklyHours = resources.reduce(
-    (sum, resource) => sum + resource.hours,
-    0
+  const debouncedSearch = useDebounce(search);
+  const { data, loading, error, reload } = useFetch(
+    () => fetchResources({ search: debouncedSearch, department: departmentFilter, status: statusFilter }),
+    [debouncedSearch, departmentFilter, statusFilter]
   );
 
-  const filteredResources = resources.filter((resource) => {
-    const matchesSearch = [
-      resource.name,
-      resource.role,
-      resource.project,
-      resource.id,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase());
+  const resources = data?.items ?? [];
+  const totals = data?.summary ?? { total: 0, assigned: 0, partiallyAvailable: 0, unassigned: 0 };
+  const departments = data?.departments ?? [];
+  const projectOptions = (data?.projects ?? []).map((project) => ({
+    value: project.id,
+    label: `${project.code} · ${project.name}`,
+  }));
 
-    const matchesDepartment =
-      departmentFilter === "All" ||
-      resource.department === departmentFilter;
-
-    const matchesStatus =
-      statusFilter === "All" || getStatus(resource.allocation) === statusFilter;
-
-    return matchesSearch && matchesDepartment && matchesStatus;
-  });
-
-  const saveResource = (event) => {
-    event.preventDefault();
-
-    const allocation = Number(editingResource.allocation);
-
-    if (
-      !Number.isFinite(allocation) ||
-      !Number.isInteger(allocation) ||
-      allocation < 0 ||
-      allocation > 100
-    ) {
-      window.alert("Allocation must be a whole number from 0 to 100.");
-      return;
+  const handleUnassign = async (resource, assignment) => {
+    if (!window.confirm(`Remove ${resource.name} from ${assignment.project.name}?`)) return;
+    setActionError("");
+    try {
+      await unassignResource(assignment.id);
+      reload();
+    } catch (err) {
+      setActionError(err.message);
     }
-
-    const selectedProject = editingResource.project;
-    const hours = Math.round((allocation / 100) * 40);
-
-    setResources((previous) =>
-      previous.map((resource) =>
-        resource.id === editingResource.id
-          ? {
-              ...resource,
-              project: selectedProject,
-              allocation,
-              hours,
-              status: getStatus(allocation),
-            }
-          : resource
-      )
-    );
-
-    setEditingResource(null);
   };
 
   const summary = [
-    {
-      title: "Total Resources",
-      value: resources.length,
-      color: "text-blue-600",
-    },
-    {
-      title: "Assigned Resources",
-      value: allocatedCount,
-      color: "text-violet-600",
-    },
-    {
-      title: "Partially Available",
-      value: availableCount,
-      color: "text-emerald-600",
-    },
-    {
-      title: "Unassigned Resources",
-      value: unassignedCount,
-      color: "text-amber-600",
-    },
+    { title: "Total Resources", value: totals.total, color: "text-blue-600" },
+    { title: "Assigned Resources", value: totals.assigned, color: "text-violet-600" },
+    { title: "Partially Available", value: totals.partiallyAvailable, color: "text-emerald-600" },
+    { title: "Unassigned Resources", value: totals.unassigned, color: "text-amber-600" },
   ];
-
-  const allocationStyle = (allocation) => {
-    if (allocation >= 100) return "bg-violet-600";
-    if (allocation >= 75) return "bg-blue-600";
-    if (allocation > 0) return "bg-emerald-500";
-    return "bg-slate-300";
-  };
-
-  const statusStyle = (allocation) => {
-    if (allocation === 0) return "bg-amber-50 text-amber-700";
-    if (allocation >= 100) return "bg-violet-50 text-violet-700";
-    return "bg-emerald-50 text-emerald-700";
-  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Resource Planning
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">Resource Planning</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Allocate employees across projects and monitor team capacity.
+            Allocate employees across projects and monitor team capacity. Based on a 40-hour week.
           </p>
         </div>
 
@@ -215,152 +72,32 @@ const ResourcePlanning = () => {
           onClick={() => window.print()}
           className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
         >
-          Print Resource Plan
+          Print Resources
         </button>
       </div>
 
+      <ErrorBanner message={error} onRetry={reload} />
+      <ErrorBanner message={actionError} />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
+          <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">{item.title}</p>
-            <p className={`mt-3 text-2xl font-bold ${item.color}`}>
-              {item.value}
-            </p>
+            <p className={`mt-3 text-2xl font-bold ${item.color}`}>{item.value}</p>
           </div>
         ))}
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="font-semibold text-slate-900">
-              Weekly Team Capacity
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Based on a sample capacity of 40 hours per person per week.
-            </p>
-          </div>
-          <p className="text-xl font-bold text-blue-600">
-            {totalWeeklyHours} / {resources.length * 40} hrs
-          </p>
-        </div>
-
-        <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-blue-600 transition-all"
-            style={{
-              width: `${
-                resources.length > 0
-                  ? (totalWeeklyHours / (resources.length * 40)) * 100
-                  : 0
-              }%`,
-            }}
-          />
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
-          <span>
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-blue-600" />
-            Allocated: {totalWeeklyHours} hours
-          </span>
-          <span>
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-slate-300" />
-            Remaining: {resources.length * 40 - totalWeeklyHours} hours
-          </span>
-        </div>
-      </section>
-
-      {editingResource && (
-        <form
-          onSubmit={saveResource}
-          className="space-y-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm"
-        >
-          <div>
-            <h2 className="font-semibold text-slate-900">
-              Update Resource Allocation
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {editingResource.name} · {editingResource.role}
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm text-slate-600">
-              Project
-              <select
-                value={editingResource.project}
-                onChange={(event) =>
-                  setEditingResource((previous) => ({
-                    ...previous,
-                    project: event.target.value,
-                  }))
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
-              >
-                {projects.map((project) => (
-                  <option key={project} value={project}>
-                    {project}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="text-sm text-slate-600">
-              Allocation: {editingResource.allocation}%
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={editingResource.allocation}
-                onChange={(event) =>
-                  setEditingResource((previous) => ({
-                    ...previous,
-                    allocation: Number(event.target.value),
-                  }))
-                }
-                className="mt-3 block w-full accent-blue-600"
-              />
-              <span className="mt-1 block text-xs text-slate-500">
-                Estimated weekly hours:{" "}
-                {Math.round((editingResource.allocation / 100) * 40)}
-              </span>
-            </label>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Save Allocation
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditingResource(null)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="space-y-4 border-b border-slate-200 p-5">
-          <h2 className="font-semibold text-slate-900">
-            Resource Allocation Directory
-          </h2>
+          <h2 className="font-semibold text-slate-900">Resource Allocation Directory</h2>
 
           <div className="grid gap-3 md:grid-cols-3">
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search employee, role, project..."
+              placeholder="Search employees..."
               aria-label="Search resources"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
@@ -372,16 +109,17 @@ const ResourcePlanning = () => {
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             >
               <option value="All">All departments</option>
-              <option value="Management">Management</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Design">Design</option>
-              <option value="Quality Assurance">Quality Assurance</option>
+              {departments.map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
             </select>
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              aria-label="Filter by availability"
+              aria-label="Filter by allocation status"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             >
               <option value="All">All allocation statuses</option>
@@ -398,7 +136,7 @@ const ResourcePlanning = () => {
               <tr>
                 <th className="px-5 py-3">Employee</th>
                 <th className="px-5 py-3">Department</th>
-                <th className="px-5 py-3">Assigned Project</th>
+                <th className="px-5 py-3">Assigned Projects</th>
                 <th className="px-5 py-3">Allocation</th>
                 <th className="px-5 py-3">Weekly Hours</th>
                 <th className="px-5 py-3">Status</th>
@@ -407,74 +145,84 @@ const ResourcePlanning = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredResources.map((resource) => (
-                <tr key={resource.id} className="hover:bg-slate-50">
+              {resources.map((resource) => (
+                <tr key={resource.employeeId} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
-                    <p className="font-medium text-slate-900">
-                      {resource.name}
-                    </p>
+                    <p className="font-medium text-slate-900">{resource.name}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {resource.id} · {resource.role}
+                      {resource.code} · {resource.jobTitle}
                     </p>
                   </td>
-
-                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                    {resource.department}
-                  </td>
-
+                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">{resource.department}</td>
                   <td className="min-w-48 px-5 py-4 text-slate-700">
-                    {resource.project}
+                    {resource.assignments.length === 0 ? (
+                      <span className="text-slate-400">Unassigned</span>
+                    ) : (
+                      <ul className="space-y-1">
+                        {resource.assignments.map((assignment) => (
+                          <li key={assignment.id} className="flex items-center gap-2">
+                            <span>
+                              {assignment.project.name}{" "}
+                              <span className="text-xs text-slate-500">({assignment.allocation}%)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleUnassign(resource, assignment)}
+                              aria-label={`Remove ${resource.name} from ${assignment.project.name}`}
+                              className="text-xs font-medium text-red-600 hover:text-red-800"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </td>
-
                   <td className="min-w-40 px-5 py-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-slate-900">
-                        {resource.allocation}%
-                      </span>
-                    </div>
+                    <span className="font-medium text-slate-900">{resource.allocation}%</span>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className={`h-full rounded-full ${allocationStyle(
-                          resource.allocation
-                        )}`}
-                        style={{ width: `${resource.allocation}%` }}
+                        className={`h-full rounded-full ${allocationStyle(resource.allocation)}`}
+                        style={{ width: `${Math.min(resource.allocation, 100)}%` }}
                       />
                     </div>
                   </td>
-
-                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                    {formatHours(resource.hours)}
-                  </td>
-
+                  <td className="whitespace-nowrap px-5 py-4 text-slate-600">{resource.hours} hrs/week</td>
                   <td className="px-5 py-4">
                     <span
-                      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusStyle(
-                        resource.allocation
-                      )}`}
+                      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusStyle(resource.allocation)}`}
                     >
-                      {getStatus(resource.allocation)}
+                      {resource.status}
                     </span>
                   </td>
-
                   <td className="px-5 py-4">
                     <button
                       type="button"
-                      onClick={() => setEditingResource({ ...resource })}
-                      className="whitespace-nowrap font-medium text-blue-600 hover:text-blue-800"
+                      onClick={() => setAssigning(resource)}
+                      disabled={resource.allocation >= 100 || projectOptions.length === 0}
+                      title={
+                        projectOptions.length === 0
+                          ? "Create an active project first"
+                          : resource.allocation >= 100
+                            ? "Fully allocated"
+                            : undefined
+                      }
+                      className="whitespace-nowrap font-medium text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-slate-300"
                     >
-                      Manage
+                      Assign
                     </button>
                   </td>
                 </tr>
               ))}
 
-              {filteredResources.length === 0 && (
+              {resources.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    No resources match your search or filters.
+                  <td colSpan={7} className="px-5 py-10 text-center text-slate-500">
+                    {loading
+                      ? "Loading resources..."
+                      : data?.total
+                        ? "No resources match your search or filters."
+                        : "No active employees yet. Add employees on the Employee Directory page."}
                   </td>
                 </tr>
               )}
@@ -483,9 +231,26 @@ const ResourcePlanning = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-          Showing {filteredResources.length} of {resources.length} sample resources
+          Showing {resources.length} of {data?.total ?? 0} resources
         </div>
       </section>
+
+      {assigning && (
+        <FormModal
+          title={`Assign ${assigning.name} (${100 - assigning.allocation}% free)`}
+          submitLabel="Save Assignment"
+          fields={[
+            { name: "projectId", label: "Project", type: "select", options: projectOptions },
+            { name: "allocation", label: "Allocation (%)", type: "number", step: "1", min: "1" },
+          ]}
+          initialValues={{ allocation: String(100 - assigning.allocation) }}
+          onSubmit={async ({ projectId, allocation }) => {
+            await assignResource({ employeeId: assigning.employeeId, projectId, allocation });
+            reload();
+          }}
+          onClose={() => setAssigning(null)}
+        />
+      )}
     </div>
   );
 };

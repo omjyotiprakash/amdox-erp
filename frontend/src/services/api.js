@@ -60,6 +60,18 @@ const request = async (path, { method = "GET", body, auth = true } = {}) => {
   return payload?.data;
 };
 
+// Builds "?a=1&b=2", skipping empty values and the "All" filter placeholder.
+export const query = (params = {}) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "" && value !== "All") {
+      search.set(key, value);
+    }
+  });
+  const text = search.toString();
+  return text ? `?${text}` : "";
+};
+
 const api = {
   get: (path, options) => request(path, { ...options, method: "GET" }),
   post: (path, body, options) => request(path, { ...options, method: "POST", body }),
