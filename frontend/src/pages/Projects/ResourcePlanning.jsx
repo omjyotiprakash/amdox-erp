@@ -4,6 +4,7 @@ import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
 import { assignResource, fetchResources, unassignResource } from "../../services/projectService";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusStyle = (allocation) => {
   if (allocation === 0) return "bg-amber-50 text-amber-700";
@@ -19,6 +20,7 @@ const allocationStyle = (allocation) => {
 };
 
 const ResourcePlanning = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -40,7 +42,7 @@ const ResourcePlanning = () => {
   }));
 
   const handleUnassign = async (resource, assignment) => {
-    if (!window.confirm(`Remove ${resource.name} from ${assignment.project.name}?`)) return;
+    if (!(await confirm({ title: "Remove from project?", message: `Remove ${resource.name} from ${assignment.project.name}?`, confirmLabel: "Remove", danger: true }))) return;
     setActionError("");
     try {
       await unassignResource(assignment.id);

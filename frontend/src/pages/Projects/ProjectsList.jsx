@@ -9,6 +9,7 @@ import Pagination from "../../components/common/Pagination";
 import { createProject, deleteProject, fetchProjects, updateProject } from "../../services/projectService";
 import { localToday } from "../../utils/dateUtils";
 import { formatCurrency, formatDate } from "../../utils/formatters";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const STATUSES = ["Planning", "In Progress", "Completed", "On Hold", "Cancelled"];
 
@@ -32,6 +33,7 @@ const projectFields = [
 ];
 
 const ProjectsList = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
@@ -58,8 +60,8 @@ const ProjectsList = () => {
     }
   };
 
-  const handleDelete = (project) => {
-    if (!window.confirm(`Delete ${project.name} (${project.code})? Its milestones and team assignments will be removed.`)) return;
+  const handleDelete = async (project) => {
+    if (!(await confirm({ title: "Delete project?", message: `Delete ${project.name} (${project.code})? Its milestones and team assignments will be removed.`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => deleteProject(project.id));
   };
 

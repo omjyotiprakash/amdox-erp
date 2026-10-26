@@ -50,6 +50,19 @@ only if you really want anyone to be able to sign up).
   requests (they can request and cancel their own) and payslips. It finds a person's HR record by **email**:
   add the person in the Employee Directory using the same email they sign in with.
 
+## On a phone
+
+The app is built to work like a mobile app, not a shrunken website:
+
+- A bottom tab bar (Home, Profile, your top modules, Menu) and a compact header with an account menu.
+- Every popup (forms, confirmations, notifications, account menu) opens as a bottom sheet you can dismiss
+  by tapping outside or pressing Escape; on larger screens they are centred dialogs.
+- Tables turn into tap-friendly cards, and form fields use 16px text so iPhones do not zoom in.
+- It is installable: open the site in Chrome (Android) or Safari (iPhone) and choose **Add to Home Screen**
+  to get a full-screen app icon.
+
+Regenerate the app icons with `node frontend/scripts/make-icons.cjs`.
+
 ## Tests
 
 ```bash

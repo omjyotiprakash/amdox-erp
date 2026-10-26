@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
 import { createUser, fetchUsers, updateUser } from "../../services/settingsService";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusStyle = {
   active: "bg-emerald-50 text-emerald-700",
@@ -17,6 +18,7 @@ const formatLastLogin = (value) =>
     : "Never";
 
 const Users = () => {
+  const confirm = useConfirm();
   const { user: currentUser } = useAuth();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
@@ -48,9 +50,9 @@ const Users = () => {
     }
   };
 
-  const toggleStatus = (user) => {
+  const toggleStatus = async (user) => {
     const next = user.status === "active" ? "inactive" : "active";
-    if (next === "inactive" && !window.confirm(`Deactivate ${user.name}? They will be signed out and unable to log in.`)) return;
+    if (next === "inactive" && !(await confirm({ title: "Deactivate user?", message: `Deactivate ${user.name}? They will be signed out and unable to log in.`, confirmLabel: "Deactivate", danger: true }))) return;
     runAction(() => updateUser(user.id, { status: next }), `${user.name} is now ${next}.`);
   };
 

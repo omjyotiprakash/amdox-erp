@@ -13,6 +13,7 @@ import {
   updateStock,
 } from "../../services/supplyChainService";
 import { formatCurrency } from "../../utils/formatters";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const stockStyle = {
   "In Stock": "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700",
@@ -32,6 +33,7 @@ const productFields = [
 ];
 
 const Inventory = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [stockFilter, setStockFilter] = useState("All");
@@ -51,7 +53,7 @@ const Inventory = () => {
   const categories = data?.categories ?? [];
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Delete ${item.name} (${item.code})?`)) return;
+    if (!(await confirm({ title: "Delete product?", message: `Delete ${item.name} (${item.code})? This cannot be undone.`, confirmLabel: "Delete", danger: true }))) return;
     setActionError("");
     try {
       await deleteProduct(item.id);

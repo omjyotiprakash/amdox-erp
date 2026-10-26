@@ -12,6 +12,7 @@ import {
   updateEmployee,
 } from "../../services/hrService";
 import { localToday } from "../../utils/dateUtils";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusClass = {
   Active: "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700",
@@ -31,6 +32,7 @@ const employeeFields = [
 ];
 
 const Employees = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -64,8 +66,8 @@ const Employees = () => {
     }
   };
 
-  const handleDelete = (employee) => {
-    if (!window.confirm(`Delete ${employee.name} (${employee.code})?`)) return;
+  const handleDelete = async (employee) => {
+    if (!(await confirm({ title: "Delete employee?", message: `Delete ${employee.name} (${employee.code})? This cannot be undone.`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => deleteEmployee(employee.id));
   };
 

@@ -14,6 +14,7 @@ import {
 } from "../../services/supplyChainService";
 import { localToday } from "../../utils/dateUtils";
 import { formatCurrency, formatDate } from "../../utils/formatters";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusStyles = {
   Pending: "bg-amber-50 text-amber-700",
@@ -33,6 +34,7 @@ const NEXT_STATUSES = {
 };
 
 const PurchaseOrders = () => {
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [vendorFilter, setVendorFilter] = useState("All");
@@ -64,8 +66,8 @@ const PurchaseOrders = () => {
     }
   };
 
-  const handleDelete = (order) => {
-    if (!window.confirm(`Delete purchase order ${order.code}?`)) return;
+  const handleDelete = async (order) => {
+    if (!(await confirm({ title: "Delete purchase order?", message: `Delete purchase order ${order.code}?`, confirmLabel: "Delete", danger: true }))) return;
     runAction(() => deletePurchaseOrder(order.id));
   };
 

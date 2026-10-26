@@ -2,11 +2,13 @@ import { useState } from "react";
 import ErrorBanner from "../../components/common/ErrorBanner";
 import { useFetch } from "../../hooks/useFetch";
 import { fetchIntegrations, setIntegrationEnabled } from "../../services/settingsService";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const statusStyle = (enabled) =>
   enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600";
 
 const Integrations = () => {
+  const confirm = useConfirm();
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [showEnabledOnly, setShowEnabledOnly] = useState(false);
@@ -33,7 +35,7 @@ const Integrations = () => {
     setActionError("");
     setMessage("");
 
-    if (integration.enabled && !window.confirm(`Turn off ${integration.name}?`)) return;
+    if (integration.enabled && !(await confirm({ title: "Turn off integration?", message: `Turn off ${integration.name}?`, confirmLabel: "Turn off" }))) return;
 
     try {
       await setIntegrationEnabled(integration.key, !integration.enabled);
