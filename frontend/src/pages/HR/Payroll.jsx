@@ -1,141 +1,115 @@
-
 import { useState } from "react";
-
-const initialPayroll = [
-  {
-    id: "PAY-1001",
-    employeeId: "EMP-1001",
-    name: "Aarav Sharma",
-    department: "Engineering",
-    basicSalary: 65000,
-    deductions: 5000,
-    netSalary: 60000,
-    status: "Paid",
-  },
-  {
-    id: "PAY-1002",
-    employeeId: "EMP-1002",
-    name: "Priya Patel",
-    department: "Human Resources",
-    basicSalary: 58000,
-    deductions: 4000,
-    netSalary: 54000,
-    status: "Pending",
-  },
-  {
-    id: "PAY-1003",
-    employeeId: "EMP-1003",
-    name: "Rohan Das",
-    department: "Finance",
-    basicSalary: 52000,
-    deductions: 3500,
-    netSalary: 48500,
-    status: "Paid",
-  },
-  {
-    id: "PAY-1004",
-    employeeId: "EMP-1004",
-    name: "Ananya Singh",
-    department: "Marketing",
-    basicSalary: 48000,
-    deductions: 3000,
-    netSalary: 45000,
-    status: "Pending",
-  },
-  {
-    id: "PAY-1005",
-    employeeId: "EMP-1005",
-    name: "Vikram Rao",
-    department: "Engineering",
-    basicSalary: 62000,
-    deductions: 4500,
-    netSalary: 57500,
-    status: "Processing",
-  },
-];
+import ErrorBanner from "../../components/common/ErrorBanner";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useFetch } from "../../hooks/useFetch";
+import { fetchPayroll, generatePayroll, setPayrollStatus } from "../../services/hrService";
+import { localMonth } from "../../utils/dateUtils";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
   }).format(amount);
 
+const statusClass = {
+  Paid: "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700",
+  Pending: "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700",
+  Processing: "rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700",
+};
+
 const Payroll = () => {
-  const [payroll, setPayroll] = useState(initialPayroll);
+  const [month, setMonth] = useState(localMonth);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [generating, setGenerating] = useState(false);
 
-  const filteredPayroll = payroll.filter((item) => {
-    const matchesSearch = `${item.name} ${item.employeeId} ${item.department}`
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    return (
-      matchesSearch &&
-      (statusFilter === "All" || item.status === statusFilter)
-    );
-  });
-
-  const totalNetPayroll = payroll.reduce(
-    (total, item) => total + item.netSalary,
-    0
+  const debouncedSearch = useDebounce(search);
+  const { data, loading, error, reload } = useFetch(
+    () => fetchPayroll({ month, search: debouncedSearch, status: statusFilter }),
+    [month, debouncedSearch, statusFilter]
   );
 
-  const paidPayroll = payroll
-    .filter((item) => item.status === "Paid")
-    .reduce((total, item) => total + item.netSalary, 0);
+  const payroll = data?.items ?? [];
+  const totals = data?.summary ?? { totalNet: 0, paid: 0, pendingCount: 0 };
 
-  const pendingCount = payroll.filter(
-    (item) => item.status === "Pending"
-  ).length;
+  const handleGenerate = async () => {
+    setActionError("");
+    setNotice("");
+    setGenerating(true);
+    try {
+      const { created, alreadyExisted } = await generatePayroll(month);
+      setNotice(
+        created
+          ? `Created ${created} payroll ${created === 1 ? "entry" : "entries"} for ${month}.`
+          : alreadyExisted
+            ? `Payroll for ${month} has already been generated.`
+            : "No employees with a salary to generate payroll for. Set salaries on the Employee Directory page."
+      );
+      reload();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-  const markAsPaid = (id) => {
-    setPayroll((previous) =>
-      previous.map((item) =>
-        item.id === id ? { ...item, status: "Paid" } : item
-      )
-    );
+  const changeStatus = async (item, status) => {
+    setActionError("");
+    setNotice("");
+    try {
+      await setPayrollStatus(item.id, status);
+      reload();
+    } catch (err) {
+      setActionError(err.message);
+    }
   };
 
   const summary = [
-    {
-      title: "Total Net Payroll",
-      value: formatCurrency(totalNetPayroll),
-      color: "text-blue-600",
-    },
-    {
-      title: "Salary Paid",
-      value: formatCurrency(paidPayroll),
-      color: "text-emerald-600",
-    },
-    {
-      title: "Pending Payments",
-      value: pendingCount,
-      color: "text-amber-600",
-    },
+    { title: "Total Net Payroll", value: formatCurrency(totals.totalNet), color: "text-blue-600" },
+    { title: "Salary Paid", value: formatCurrency(totals.paid), color: "text-emerald-600" },
+    { title: "Pending Payments", value: totals.pendingCount, color: "text-amber-600" },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Payroll Management
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">Payroll Management</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Review employee salaries, deductions, and payment status.
+            Review monthly salaries, deductions, and payment status.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Print Payroll
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {generating ? "Generating..." : "Generate Payroll"}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Print Payroll
+          </button>
+        </div>
       </div>
+
+      <ErrorBanner message={error} onRetry={reload} />
+      <ErrorBanner message={actionError} />
+      {notice && (
+        <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          {notice}
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {summary.map((item) => (
@@ -144,24 +118,30 @@ const Payroll = () => {
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
             <p className="text-sm text-slate-500">{item.title}</p>
-            <p className={`mt-3 text-2xl font-bold ${item.color}`}>
-              {item.value}
-            </p>
+            <p className={`mt-3 text-2xl font-bold ${item.color}`}>{item.value}</p>
           </div>
         ))}
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-5">
           <h2 className="font-semibold text-slate-900">Employee Payroll</h2>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <input
+              type="month"
+              value={month}
+              onChange={(event) => event.target.value && setMonth(event.target.value)}
+              aria-label="Payroll month"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search employees..."
-              aria-label="Search payroll records"
+              aria-label="Search payroll"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             />
 
@@ -194,17 +174,15 @@ const Payroll = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredPayroll.map((item) => (
+              {payroll.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
-                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="font-medium text-slate-900">{item.employee?.name}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {item.employeeId}
+                      {item.employee?.code} · {item.code}
                     </p>
                   </td>
-                  <td className="px-5 py-4 text-slate-600">
-                    {item.department}
-                  </td>
+                  <td className="px-5 py-4 text-slate-600">{item.employee?.department}</td>
                   <td className="whitespace-nowrap px-5 py-4 text-right text-slate-600">
                     {formatCurrency(item.basicSalary)}
                   </td>
@@ -215,24 +193,23 @@ const Payroll = () => {
                     {formatCurrency(item.netSalary)}
                   </td>
                   <td className="px-5 py-4">
-                    <span
-                      className={
-                        item.status === "Paid"
-                          ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                          : item.status === "Pending"
-                            ? "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"
-                            : "rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
-                      }
-                    >
-                      {item.status}
-                    </span>
+                    <span className={statusClass[item.status]}>{item.status}</span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="whitespace-nowrap px-5 py-4">
+                    {item.status === "Pending" && (
+                      <button
+                        type="button"
+                        onClick={() => changeStatus(item, "Processing")}
+                        className="mr-3 font-medium text-slate-600 hover:text-slate-900"
+                      >
+                        Start processing
+                      </button>
+                    )}
                     {item.status !== "Paid" ? (
                       <button
                         type="button"
-                        onClick={() => markAsPaid(item.id)}
-                        className="whitespace-nowrap font-medium text-blue-600 hover:text-blue-800"
+                        onClick={() => changeStatus(item, "Paid")}
+                        className="font-medium text-blue-600 hover:text-blue-800"
                       >
                         Mark as paid
                       </button>
@@ -243,13 +220,14 @@ const Payroll = () => {
                 </tr>
               ))}
 
-              {filteredPayroll.length === 0 && (
+              {payroll.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    No payroll records match your filters.
+                  <td colSpan={7} className="px-5 py-10 text-center text-slate-500">
+                    {loading
+                      ? "Loading payroll..."
+                      : data?.total
+                        ? "No payroll entries match your search."
+                        : `No payroll for ${month} yet. Click Generate Payroll to create it from employee salaries.`}
                   </td>
                 </tr>
               )}
@@ -258,7 +236,7 @@ const Payroll = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-          Showing {filteredPayroll.length} of {payroll.length} sample records
+          Showing {payroll.length} of {data?.total ?? 0} entries for {month}
         </div>
       </section>
     </div>

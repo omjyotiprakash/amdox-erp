@@ -4,10 +4,14 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 // Generic "add record" dialog.
-// fields: [{ name, label, type?: "text"|"number"|"date"|"select", options?: string[], placeholder?, step? }]
+// fields: [{ name, label, type?: "text"|"number"|"date"|"select", options?: (string|{value,label})[],
+//            placeholder?, step?, optional?, min? }]
+const optionValue = (option) => (typeof option === "string" ? option : option.value);
+const optionLabel = (option) => (typeof option === "string" ? option : option.label);
+
 const FormModal = ({ title, fields, initialValues = {}, submitLabel = "Save", onSubmit, onClose }) => {
   const [values, setValues] = useState(() =>
-    Object.fromEntries(fields.map((field) => [field.name, initialValues[field.name] ?? field.options?.[0] ?? ""]))
+    Object.fromEntries(fields.map((field) => [field.name, initialValues[field.name] ?? (field.options?.length ? optionValue(field.options[0]) : "")]))
   );
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,11 +71,12 @@ const FormModal = ({ title, fields, initialValues = {}, submitLabel = "Save", on
                 name={field.name}
                 value={values[field.name]}
                 onChange={handleChange}
+                required
                 className={inputClass}
               >
                 {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                  <option key={optionValue(option)} value={optionValue(option)}>
+                    {optionLabel(option)}
                   </option>
                 ))}
               </select>
@@ -81,11 +86,11 @@ const FormModal = ({ title, fields, initialValues = {}, submitLabel = "Save", on
                 name={field.name}
                 type={field.type || "text"}
                 step={field.type === "number" ? field.step || "0.01" : undefined}
-                min={field.type === "number" ? "0.01" : undefined}
+                min={field.type === "number" ? (field.min ?? "0.01") : undefined}
                 value={values[field.name]}
                 onChange={handleChange}
                 placeholder={field.placeholder}
-                required
+                required={!field.optional}
                 className={inputClass}
               />
             )}
