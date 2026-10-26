@@ -1,69 +1,10 @@
-
-import { useMemo, useState } from "react";
-
-const forecastData = [
-  {
-    id: 1,
-    product: "Dell Latitude Laptop",
-    category: "Electronics",
-    currentStock: 24,
-    monthlyDemand: 18,
-    predictedDemand: 25,
-    unitPrice: 65000,
-  },
-  {
-    id: 2,
-    product: "Wireless Mouse",
-    category: "Accessories",
-    currentStock: 8,
-    monthlyDemand: 20,
-    predictedDemand: 28,
-    unitPrice: 800,
-  },
-  {
-    id: 3,
-    product: "Office Chair",
-    category: "Furniture",
-    currentStock: 32,
-    monthlyDemand: 12,
-    predictedDemand: 15,
-    unitPrice: 5500,
-  },
-  {
-    id: 4,
-    product: "Mechanical Keyboard",
-    category: "Accessories",
-    currentStock: 0,
-    monthlyDemand: 14,
-    predictedDemand: 22,
-    unitPrice: 2500,
-  },
-  {
-    id: 5,
-    product: "24-inch Monitor",
-    category: "Electronics",
-    currentStock: 12,
-    monthlyDemand: 10,
-    predictedDemand: 13,
-    unitPrice: 12000,
-  },
-  {
-    id: 6,
-    product: "Office Desk",
-    category: "Furniture",
-    currentStock: 6,
-    monthlyDemand: 8,
-    predictedDemand: 11,
-    unitPrice: 8500,
-  },
-];
-
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import ErrorBanner from "../../components/common/ErrorBanner";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useFetch } from "../../hooks/useFetch";
+import { fetchForecast } from "../../services/supplyChainService";
+import { formatCurrency } from "../../utils/formatters";
 
 const Forecasting = () => {
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -71,83 +12,40 @@ const Forecasting = () => {
   const [forecastPeriod, setForecastPeriod] = useState("1");
 
   const months = Number(forecastPeriod);
-
-  const forecast = useMemo(() => {
-    return forecastData
-      .filter((item) => {
-        const matchesCategory =
-          categoryFilter === "All" || item.category === categoryFilter;
-
-        const matchesSearch = item.product
-          .toLowerCase()
-          .includes(search.toLowerCase());
-
-        return matchesCategory && matchesSearch;
-      })
-      .map((item) => {
-        const predictedDemand = Math.round(item.predictedDemand * months);
-        const stockShortfall = Math.max(
-          0,
-          predictedDemand - item.currentStock
-        );
-        const growth =
-          ((item.predictedDemand - item.monthlyDemand) /
-            Math.max(item.monthlyDemand, 1)) *
-          100;
-
-        return {
-          ...item,
-          predictedDemand,
-          stockShortfall,
-          growth,
-          estimatedValue: predictedDemand * item.unitPrice,
-        };
-      });
-  }, [categoryFilter, search, months]);
-
-  const totalPredictedDemand = forecast.reduce(
-    (sum, item) => sum + item.predictedDemand,
-    0
+  const debouncedSearch = useDebounce(search);
+  const { data, loading, error, reload } = useFetch(
+    () => fetchForecast({ months, category: categoryFilter, search: debouncedSearch }),
+    [months, categoryFilter, debouncedSearch]
   );
 
-  const totalShortfall = forecast.reduce(
-    (sum, item) => sum + item.stockShortfall,
-    0
-  );
-
-  const estimatedDemandValue = forecast.reduce(
-    (sum, item) => sum + item.estimatedValue,
-    0
-  );
-
-  const productsToReorder = forecast.filter(
-    (item) => item.stockShortfall > 0
-  ).length;
+  const forecast = data?.items ?? [];
+  const totals = data?.summary ?? { forecastedUnits: 0, productsToReorder: 0, totalShortfall: 0, estimatedValue: 0 };
+  const categories = data?.categories ?? [];
 
   const summary = [
     {
       title: "Forecasted Units",
-      value: totalPredictedDemand.toLocaleString("en-IN"),
+      value: totals.forecastedUnits.toLocaleString("en-IN"),
       color: "text-blue-600",
       note: `Next ${months} ${months === 1 ? "month" : "months"}`,
     },
     {
       title: "Products to Reorder",
-      value: productsToReorder,
+      value: totals.productsToReorder,
       color: "text-amber-600",
-      note: "Based on predicted demand",
+      note: "Forecast demand exceeds current stock",
     },
     {
       title: "Potential Stock Shortfall",
-      value: totalShortfall.toLocaleString("en-IN"),
+      value: totals.totalShortfall.toLocaleString("en-IN"),
       color: "text-red-600",
       note: "Units needed beyond current stock",
     },
     {
       title: "Estimated Demand Value",
-      value: formatCurrency(estimatedDemandValue),
+      value: formatCurrency(totals.estimatedValue),
       color: "text-emerald-600",
-      note: "Based on sample unit prices",
+      note: "Forecast units at current unit prices",
     },
   ];
 
@@ -155,11 +53,13 @@ const Forecasting = () => {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Demand Forecasting
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">Demand Forecasting</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Estimate future product demand and identify potential stock shortages.
+            Projected demand from each product's monthly demand and expected growth. Set those on the{" "}
+            <Link to="/supply-chain/inventory" className="font-medium text-blue-600 hover:underline">
+              Inventory
+            </Link>{" "}
+            page.
           </p>
         </div>
 
@@ -172,44 +72,32 @@ const Forecasting = () => {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-        <p className="text-sm font-semibold text-blue-900">
-          Forecast overview
-        </p>
-        <p className="mt-1 text-sm leading-6 text-blue-800">
-          These estimates use illustrative monthly demand figures and fixed
-          growth assumptions. They are sample projections, not predictions
-          generated from actual sales history.
-        </p>
-      </div>
+      <ErrorBanner message={error} onRetry={reload} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
+          <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">{item.title}</p>
-            <p className={`mt-3 text-2xl font-bold ${item.color}`}>
-              {item.value}
-            </p>
-            <p className="mt-2 text-xs text-slate-500">{item.note}</p>
+            <p className={`mt-3 text-2xl font-bold ${item.color}`}>{item.value}</p>
+            <p className="mt-2 text-xs text-slate-400">{item.note}</p>
           </div>
         ))}
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="font-semibold text-slate-900">
-              Forecast Configuration
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Choose a projection period and product category.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="space-y-4 border-b border-slate-200 p-5">
+          <h2 className="font-semibold text-slate-900">Product Demand Forecast</h2>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search products..."
+              aria-label="Search forecast"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+
             <select
               value={forecastPeriod}
               onChange={(event) => setForecastPeriod(event.target.value)}
@@ -228,33 +116,13 @@ const Forecasting = () => {
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             >
               <option value="All">All categories</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Accessories">Accessories</option>
-              <option value="Furniture">Furniture</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
             </select>
           </div>
-        </div>
-
-        <div className="mt-4">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search products..."
-            aria-label="Search forecast products"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 sm:max-w-sm"
-          />
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-5">
-          <h2 className="font-semibold text-slate-900">
-            Product Demand Forecast
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Compare current inventory with estimated future demand.
-          </p>
         </div>
 
         <div className="overflow-x-auto">
@@ -275,26 +143,12 @@ const Forecasting = () => {
               {forecast.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
-                    <p className="font-medium text-slate-900">
-                      {item.product}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {item.category}
-                    </p>
+                    <p className="font-medium text-slate-900">{item.product}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.category}</p>
                   </td>
-
-                  <td className="px-5 py-4 text-slate-700">
-                    {item.currentStock}
-                  </td>
-
-                  <td className="px-5 py-4 text-slate-700">
-                    {item.monthlyDemand}
-                  </td>
-
-                  <td className="px-5 py-4 font-semibold text-slate-900">
-                    {item.predictedDemand}
-                  </td>
-
+                  <td className="px-5 py-4 text-slate-700">{item.currentStock}</td>
+                  <td className="px-5 py-4 text-slate-700">{item.monthlyDemand}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-900">{item.predictedDemand}</td>
                   <td className="px-5 py-4">
                     <span
                       className={
@@ -306,22 +160,20 @@ const Forecasting = () => {
                       {item.stockShortfall}
                     </span>
                   </td>
-
                   <td className="whitespace-nowrap px-5 py-4">
                     <span
                       className={
-                        item.growth > 0
+                        item.demandGrowth > 0
                           ? "font-medium text-emerald-600"
-                          : item.growth < 0
+                          : item.demandGrowth < 0
                             ? "font-medium text-red-600"
                             : "text-slate-500"
                       }
                     >
-                      {item.growth > 0 ? "↑ " : item.growth < 0 ? "↓ " : ""}
-                      {Math.abs(item.growth).toFixed(1)}%
+                      {item.demandGrowth > 0 ? "↑ " : item.demandGrowth < 0 ? "↓ " : ""}
+                      {Math.abs(item.demandGrowth).toFixed(1)}%
                     </span>
                   </td>
-
                   <td className="px-5 py-4">
                     {item.stockShortfall > 0 ? (
                       <span className="whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
@@ -338,11 +190,12 @@ const Forecasting = () => {
 
               {forecast.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    No products match your search or category.
+                  <td colSpan={7} className="px-5 py-10 text-center text-slate-500">
+                    {loading
+                      ? "Loading forecast..."
+                      : data?.total
+                        ? "No products match your search or category."
+                        : "No products yet. Add products on the Inventory page to see a forecast."}
                   </td>
                 </tr>
               )}
@@ -351,7 +204,7 @@ const Forecasting = () => {
         </div>
 
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-          Showing {forecast.length} of {forecastData.length} sample products
+          Showing {forecast.length} of {data?.total ?? 0} products. This is a rule-based projection, not a machine-learning forecast.
         </div>
       </section>
     </div>
