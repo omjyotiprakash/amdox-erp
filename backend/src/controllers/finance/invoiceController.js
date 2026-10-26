@@ -1,8 +1,8 @@
 // Builds the HTTP handlers for an invoice service (shared by payables and receivables).
 const createInvoiceController = (service) => ({
   list: async (req, res) => {
-    const { search, status } = req.query;
-    res.json({ success: true, data: await service.list({ search, status }) });
+    const { search, status, page, limit } = req.query;
+    res.json({ success: true, data: await service.list({ search, status, page, limit }) });
   },
 
   create: async (req, res) => {

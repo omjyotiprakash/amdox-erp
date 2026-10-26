@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
+import { changePassword } from "../../services/authService";
+import FormModal from "./FormModal";
 
 const levelDot = {
   danger: "bg-red-500",
@@ -12,6 +14,8 @@ const levelDot = {
 
 const Header = ({ onMenuClick }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState("");
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { items: notifications, count: notificationCount, reload: reloadNotifications } = useNotifications();
@@ -132,12 +136,47 @@ const Header = ({ onMenuClick }) => {
 
         <button
           type="button"
+          onClick={() => {
+            setPasswordNotice("");
+            setChangingPassword(true);
+          }}
+          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Change password
+        </button>
+
+        <button
+          type="button"
           onClick={handleLogout}
           className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
         >
           Logout
         </button>
       </div>
+
+      {passwordNotice && (
+        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {passwordNotice}
+        </p>
+      )}
+
+      {changingPassword && (
+        <FormModal
+          title="Change password"
+          submitLabel="Change password"
+          fields={[
+            { name: "currentPassword", label: "Current password", type: "password" },
+            { name: "newPassword", label: "New password (min 8 characters)", type: "password" },
+            { name: "confirmPassword", label: "Confirm new password", type: "password" },
+          ]}
+          onSubmit={async ({ currentPassword, newPassword, confirmPassword }) => {
+            if (newPassword !== confirmPassword) throw new Error("The new passwords do not match.");
+            await changePassword({ currentPassword, newPassword });
+            setPasswordNotice("Password changed. Your other devices have been signed out.");
+          }}
+          onClose={() => setChangingPassword(false)}
+        />
+      )}
     </header>
   );
 };

@@ -3,6 +3,8 @@ import ErrorBanner from "../../components/common/ErrorBanner";
 import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
+import { usePage } from "../../hooks/usePagination";
+import Pagination from "../../components/common/Pagination";
 import {
   createEmployee,
   deleteEmployee,
@@ -36,14 +38,16 @@ const Employees = () => {
   const [actionError, setActionError] = useState("");
 
   const debouncedSearch = useDebounce(search);
+  const [page, setPage] = usePage([debouncedSearch, departmentFilter, statusFilter]);
   const { data, loading, error, reload } = useFetch(
     () =>
       fetchEmployees({
         search: debouncedSearch,
         department: departmentFilter,
         status: statusFilter,
+        page,
       }),
-    [debouncedSearch, departmentFilter, statusFilter]
+    [debouncedSearch, departmentFilter, statusFilter, page]
   );
 
   const employees = data?.items ?? [];
@@ -223,6 +227,7 @@ const Employees = () => {
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
           Showing {employees.length} of {data?.total ?? 0} employees
         </div>
+        <Pagination page={data?.page} pages={data?.pages} matching={data?.matching} limit={data?.limit} onChange={setPage} />
       </section>
 
       {form && (

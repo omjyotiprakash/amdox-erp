@@ -3,27 +3,32 @@ const Assignment = require("../../models/project/Resource");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const assertDates = ({ startDate, dueDate }) => {
   if (dueDate < startDate) throw new AppError(400, "Due date cannot be before the start date");
 };
 
-const list = async ({ search, status }) => {
+const list = async ({ search, status, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (status && status !== "All") filter.status = status;
   const clause = searchFilter(search, ["code", "name", "client", "manager"]);
   if (clause) Object.assign(filter, clause);
 
   const [items, total, counts, [money]] = await Promise.all([
-    Project.find(filter).select("-milestones").sort({ code: 1 }).limit(500),
+    Project.find(filter).select("-milestones").sort({ code: 1 }).skip(paging.skip).limit(paging.limit),
     Project.countDocuments(),
     Project.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     Project.aggregate([{ $group: { _id: null, budget: { $sum: "$budget" }, spent: { $sum: "$spent" } } }]),
   ]);
   const countOf = (status) => counts.find((row) => row._id === status)?.count || 0;
 
+  const matching = await Project.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     summary: {
       total,

@@ -1,8 +1,8 @@
 const inventoryService = require("../../services/supplyChain/inventoryService");
 
 const list = async (req, res) => {
-  const { search, category, stock } = req.query;
-  res.json({ success: true, data: await inventoryService.list({ search, category, stock }) });
+  const { search, category, stock, page, limit } = req.query;
+  res.json({ success: true, data: await inventoryService.list({ search, category, stock, page, limit }) });
 };
 
 const create = async (req, res) => {

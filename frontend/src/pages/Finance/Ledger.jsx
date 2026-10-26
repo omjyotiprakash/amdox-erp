@@ -3,6 +3,8 @@ import ErrorBanner from "../../components/common/ErrorBanner";
 import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
+import { usePage } from "../../hooks/usePagination";
+import Pagination from "../../components/common/Pagination";
 import { createTransaction, deleteTransaction, fetchLedger } from "../../services/financeService";
 import { localToday } from "../../utils/dateUtils";
 
@@ -30,9 +32,10 @@ const Ledger = () => {
   const [actionError, setActionError] = useState("");
 
   const debouncedSearch = useDebounce(search);
+  const [page, setPage] = usePage([debouncedSearch, typeFilter]);
   const { data, loading, error, reload } = useFetch(
-    () => fetchLedger({ search: debouncedSearch, type: typeFilter }),
-    [debouncedSearch, typeFilter]
+    () => fetchLedger({ search: debouncedSearch, type: typeFilter, page }),
+    [debouncedSearch, typeFilter, page]
   );
 
   const transactions = data?.items ?? [];
@@ -209,6 +212,7 @@ const Ledger = () => {
           Showing {transactions.length} of {data?.total ?? 0} transactions. Totals
           include Posted transactions only.
         </div>
+        <Pagination page={data?.page} pages={data?.pages} matching={data?.matching} limit={data?.limit} onChange={setPage} />
       </section>
 
       {showForm && (

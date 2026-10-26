@@ -1,8 +1,8 @@
 const vendorService = require("../../services/supplyChain/vendorService");
 
 const list = async (req, res) => {
-  const { search, category, status } = req.query;
-  res.json({ success: true, data: await vendorService.list({ search, category, status }) });
+  const { search, category, status, page, limit } = req.query;
+  res.json({ success: true, data: await vendorService.list({ search, category, status, page, limit }) });
 };
 
 const create = async (req, res) => {

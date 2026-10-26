@@ -24,6 +24,7 @@ const navigation = [
   { name: "Integrations", path: "/settings/integrations", module: "settings" },
   { name: "Roles & Permissions", path: "/settings/roles", module: "settings" },
   { name: "User Management", path: "/settings/users", module: "settings" },
+  { name: "Audit Log", path: "/settings/audit", module: "settings" },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {

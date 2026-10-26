@@ -14,6 +14,9 @@ export const createRole = (body) => api.post("/settings/roles", body);
 export const saveRolePermissions = (id, permissions) => api.put(`/settings/roles/${id}/permissions`, { permissions });
 export const deleteRole = (id) => api.delete(`/settings/roles/${id}`);
 
+// Audit log
+export const fetchAuditLog = (params) => api.get(`/settings/audit${query(params)}`);
+
 // Users
 export const fetchUsers = (params) => api.get(`/settings/users${query(params)}`);
 export const createUser = (body) => api.post("/settings/users", body);

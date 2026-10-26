@@ -2,8 +2,7 @@ const Transaction = require("../../models/finance/Transaction");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("./financeUtils");
-
-const MAX_LIMIT = 500;
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 // Totals count Posted entries only; Pending ones are listed but not yet part of the books.
 const summarize = async () => {
@@ -17,7 +16,8 @@ const summarize = async () => {
   return { income, expenses, net: income - expenses };
 };
 
-const list = async ({ search, type, limit }) => {
+const list = async ({ search, type, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (type && type !== "All") filter.type = type;
   const searchClause = searchFilter(search, ["code", "description", "account"]);
@@ -26,11 +26,12 @@ const list = async ({ search, type, limit }) => {
   const [items, total, summary] = await Promise.all([
     Transaction.find(filter)
       .sort({ date: -1, createdAt: -1 })
-      .limit(Math.min(Number(limit) || 200, MAX_LIMIT)),
+      .skip(paging.skip).limit(paging.limit),
     Transaction.countDocuments(),
     summarize(),
   ]);
-  return { items, total, summary };
+  const matching = await Transaction.countDocuments(filter);
+  return { items, total, summary, ...pageInfo(paging, matching) };
 };
 
 const create = async (data, userId) =>

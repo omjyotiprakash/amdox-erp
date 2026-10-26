@@ -2,6 +2,7 @@ const Product = require("../../models/supplyChain/Inventory");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 // Mongo filters for the three derived stock statuses.
 const STOCK_FILTERS = {
@@ -15,14 +16,15 @@ const duplicateSku = (err) => {
   throw err;
 };
 
-const list = async ({ search, category, stock }) => {
+const list = async ({ search, category, stock, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = { ...STOCK_FILTERS[stock] };
   if (category && category !== "All") filter.category = category;
   const clause = searchFilter(search, ["name", "sku", "category", "code"]);
   if (clause) Object.assign(filter, clause);
 
   const [items, total, [totals], categories, lowStock, outOfStock] = await Promise.all([
-    Product.find(filter).sort({ code: 1 }).limit(500),
+    Product.find(filter).sort({ code: 1 }).skip(paging.skip).limit(paging.limit),
     Product.countDocuments(),
     Product.aggregate([
       {
@@ -38,8 +40,11 @@ const list = async ({ search, category, stock }) => {
     Product.countDocuments(STOCK_FILTERS["Out of Stock"]),
   ]);
 
+  const matching = await Product.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     categories: categories.sort(),
     summary: { total, totalUnits: totals?.units || 0, stockValue: totals?.value || 0, lowStock, outOfStock },

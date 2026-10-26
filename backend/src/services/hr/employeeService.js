@@ -6,6 +6,7 @@ const Assignment = require("../../models/project/Resource");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const NAME_FIELDS = ["code", "name", "email", "jobTitle", "department"];
 
@@ -20,7 +21,8 @@ const assertSalary = ({ basicSalary, deductions }) => {
   if (deductions > basicSalary) throw new AppError(400, "Deductions cannot exceed the basic salary");
 };
 
-const list = async ({ search, department, status }) => {
+const list = async ({ search, department, status, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (department && department !== "All") filter.department = department;
   if (status && status !== "All") filter.status = status;
@@ -28,15 +30,18 @@ const list = async ({ search, department, status }) => {
   if (clause) Object.assign(filter, clause);
 
   const [items, total, counts, departments] = await Promise.all([
-    Employee.find(filter).sort({ code: 1 }).limit(500),
+    Employee.find(filter).sort({ code: 1 }).skip(paging.skip).limit(paging.limit),
     Employee.countDocuments(),
     Employee.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     Employee.distinct("department"),
   ]);
   const countOf = (status) => counts.find((row) => row._id === status)?.count || 0;
 
+  const matching = await Employee.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     departments: departments.sort(),
     summary: { total, active: countOf("Active"), onLeave: countOf("On Leave") },

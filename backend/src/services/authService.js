@@ -9,7 +9,7 @@ const { AppError } = require("../middleware/errorHandler.middleware");
 const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", env.bcryptRounds);
 
 const signToken = (user) =>
-  jwt.sign({ sub: user._id.toString() }, env.jwtSecret, {
+  jwt.sign({ sub: user._id.toString(), tv: user.tokenVersion || 0 }, env.jwtSecret, {
     algorithm: "HS256",
     expiresIn: env.jwtExpiresIn,
   });
@@ -41,4 +41,18 @@ const login = async ({ email, password }) => {
   return { user, token: signToken(user) };
 };
 
-module.exports = { register, login, signToken };
+// Changing the password signs out every other session and returns a fresh token for this one.
+const changePassword = async (userId, { currentPassword, newPassword }) => {
+  const user = await User.findById(userId).select("+passwordHash").populate("role");
+  if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw new AppError(400, "Your current password is incorrect");
+  }
+  if (currentPassword === newPassword) throw new AppError(400, "Choose a password you have not used just now");
+
+  user.passwordHash = await bcrypt.hash(newPassword, env.bcryptRounds);
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+  return { user, token: signToken(user) };
+};
+
+module.exports = { register, login, changePassword, signToken };

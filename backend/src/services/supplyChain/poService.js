@@ -3,11 +3,13 @@ const Vendor = require("../../models/supplyChain/Vendor");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const { NEXT_STATUSES } = PurchaseOrder;
 const POPULATE = { path: "vendor", select: "code name" };
 
-const list = async ({ search, status, vendorId }) => {
+const list = async ({ search, status, vendorId, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (status && status !== "All") filter.status = status;
   if (vendorId && vendorId !== "All") filter.vendor = vendorId;
@@ -19,14 +21,17 @@ const list = async ({ search, status, vendorId }) => {
   }
 
   const [items, total, all] = await Promise.all([
-    PurchaseOrder.find(filter).populate(POPULATE).sort({ orderDate: -1, createdAt: -1 }).limit(500),
+    PurchaseOrder.find(filter).populate(POPULATE).sort({ orderDate: -1, createdAt: -1 }).skip(paging.skip).limit(paging.limit),
     PurchaseOrder.countDocuments(),
     PurchaseOrder.aggregate([{ $group: { _id: "$status", count: { $sum: 1 }, value: { $sum: "$amount" } } }]),
   ]);
   const row = (status) => all.find((entry) => entry._id === status);
 
+  const matching = await PurchaseOrder.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     summary: {
       total,

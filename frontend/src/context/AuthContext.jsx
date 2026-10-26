@@ -28,6 +28,26 @@ export const AuthProvider = ({ children }) => {
     };
   }, [logout]);
 
+  // Pick up role/permission changes made by an admin without needing a full reload.
+  useEffect(() => {
+    if (!user) return undefined;
+    let lastCheck = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastCheck < 60 * 1000) return;
+      lastCheck = Date.now();
+      authService
+        .fetchCurrentUser()
+        .then(setUser)
+        .catch(() => {}); // 401s already log the user out; network blips are ignored
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // An expired or revoked token on any later request ends the session.
   useEffect(() => {
     onUnauthorized(logout);
