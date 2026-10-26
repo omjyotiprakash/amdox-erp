@@ -1,13 +1,16 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ErrorBanner from "../../components/common/ErrorBanner";
+import { useFetch } from "../../hooks/useFetch";
+import { fetchSettings, saveSettings } from "../../services/settingsService";
 
-const initialSettings = {
-  companyName: "AMDox ERP",
-  legalName: "AMDox Technologies Pvt. Ltd.",
-  email: "admin@amdox.example",
-  phone: "+91 98765 43210",
-  website: "https://www.amdox.example",
-  address: "Bhubaneswar, Odisha, India",
+const emptySettings = {
+  companyName: "",
+  legalName: "",
+  email: "",
+  phone: "",
+  website: "",
+  address: "",
   timezone: "Asia/Kolkata",
   currency: "INR",
   dateFormat: "DD/MM/YYYY",
@@ -18,45 +21,51 @@ const initialSettings = {
 };
 
 const General = () => {
-  const [settings, setSettings] = useState(initialSettings);
-  const [savedSettings, setSavedSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState(emptySettings);
+  const [savedSettings, setSavedSettings] = useState(emptySettings);
   const [savedMessage, setSavedMessage] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data, loading, error, reload } = useFetch(fetchSettings, []);
+
+  // Fill the form once the saved settings arrive.
+  useEffect(() => {
+    if (data?.settings) {
+      const { integrations: _integrations, ...fields } = data.settings;
+      setSettings(fields);
+      setSavedSettings(fields);
+    }
+  }, [data]);
 
   const updateField = (field, value) => {
     setSettings((previous) => ({ ...previous, [field]: value }));
     setSavedMessage("");
+    setSaveError("");
   };
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
+    setSaving(true);
+    setSaveError("");
 
-    if (!settings.companyName.trim()) {
-      window.alert("Company name is required.");
-      return;
+    try {
+      const { settings: saved } = await saveSettings(settings);
+      const { integrations: _integrations, ...fields } = saved;
+      setSettings(fields);
+      setSavedSettings(fields);
+      setSavedMessage("Settings saved for your workspace.");
+    } catch (err) {
+      setSaveError(err.message);
+    } finally {
+      setSaving(false);
     }
-
-    if (
-      settings.email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email)
-    ) {
-      window.alert("Please enter a valid email address.");
-      return;
-    }
-
-    setSavedSettings({ ...settings });
-    setSavedMessage("Settings saved for this session.");
   };
 
   const handleReset = () => {
-    const confirmed = window.confirm(
-      "Reset all settings to their original demo values?"
-    );
-
-    if (!confirmed) return;
-
-    setSettings({ ...initialSettings });
-    setSavedSettings({ ...initialSettings });
-    setSavedMessage("Settings have been reset.");
+    setSettings({ ...savedSettings });
+    setSavedMessage("");
+    setSaveError("");
   };
 
   const inputClass =
@@ -80,6 +89,9 @@ const General = () => {
           Administrator
         </span>
       </div>
+
+      <ErrorBanner message={error} onRetry={reload} />
+      <ErrorBanner message={saveError} />
 
       {savedMessage && (
         <div
@@ -348,21 +360,22 @@ const General = () => {
             onClick={handleReset}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Reset to Defaults
+            Discard Changes
           </button>
 
           <button
             type="submit"
-            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            disabled={saving || loading}
+            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Settings
+            {saving ? "Saving..." : "Save Settings"}
           </button>
         </div>
       </form>
 
       <p className="text-xs text-slate-400">
-        Demo settings only. Preferences are held in page state and are not
-        persisted to a database or browser storage.
+        Settings are saved for the whole workspace. Low Stock Alerts controls the stock
+        warnings in the notification bell; email delivery is not set up yet.
       </p>
     </div>
   );

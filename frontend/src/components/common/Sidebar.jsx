@@ -1,30 +1,37 @@
 
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
+// "module" is the permission a user's role needs (view) for the link to be shown.
 const navigation = [
   { name: "Dashboard", path: "/" },
-  { name: "Ledger", path: "/finance/ledger" },
-  { name: "Payables", path: "/finance/payables" },
-  { name: "Receivables", path: "/finance/receivables" },
-  { name: "Human Resources", path: "/hr/employees" },
-  { name: "Attendance", path: "/hr/attendance" },
-  { name: "Leave Management", path: "/hr/leave" },
-  { name: "Payroll", path: "/hr/payroll" },
-  { name: "Supply Chain", path: "/supply-chain/inventory" },
-  { name: "Vendors", path: "/supply-chain/vendors" },
-  { name: "Purchase Orders", path: "/supply-chain/purchase-orders" },
-  { name: "Forecasting", path: "/supply-chain/forecasting" },
-  { name: "Projects", path: "/projects" },
-  { name: "Reports", path: "/reports" },
-  { name: "Settings", path: "/settings/general" },
-  { name: "Project Details", path: "/projects/details" },
-  { name: "Resource Planning", path: "/projects/resources" },
-  { name: "Integrations", path: "/settings/integrations" },
-  { name: "Roles & Permissions", path: "/settings/roles" },
-  { name: "User Management", path: "/settings/users" },
+  { name: "Ledger", path: "/finance/ledger", module: "finance" },
+  { name: "Payables", path: "/finance/payables", module: "finance" },
+  { name: "Receivables", path: "/finance/receivables", module: "finance" },
+  { name: "Human Resources", path: "/hr/employees", module: "hr" },
+  { name: "Attendance", path: "/hr/attendance", module: "hr" },
+  { name: "Leave Management", path: "/hr/leave", module: "hr" },
+  { name: "Payroll", path: "/hr/payroll", module: "hr" },
+  { name: "Supply Chain", path: "/supply-chain/inventory", module: "supplyChain" },
+  { name: "Vendors", path: "/supply-chain/vendors", module: "supplyChain" },
+  { name: "Purchase Orders", path: "/supply-chain/purchase-orders", module: "supplyChain" },
+  { name: "Forecasting", path: "/supply-chain/forecasting", module: "supplyChain" },
+  { name: "Projects", path: "/projects", module: "projects" },
+  { name: "Reports", path: "/reports", module: "reports" },
+  { name: "Settings", path: "/settings/general", module: "settings" },
+  { name: "Project Details", path: "/projects/details", module: "projects" },
+  { name: "Resource Planning", path: "/projects/resources", module: "projects" },
+  { name: "Integrations", path: "/settings/integrations", module: "settings" },
+  { name: "Roles & Permissions", path: "/settings/roles", module: "settings" },
+  { name: "User Management", path: "/settings/users", module: "settings" },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
+  const visible = navigation.filter(
+    (item) => !item.module || user?.role?.permissions?.[item.module]?.view
+  );
+
   return (
     <>
       {/* Mobile overlay */}
@@ -78,7 +85,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-          {navigation.map((item) => (
+          {visible.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}

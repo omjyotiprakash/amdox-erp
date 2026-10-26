@@ -27,4 +27,14 @@ router.use("/supply-chain/forecasting", require("./supplyChain/forecastingRoutes
 router.use("/projects/resources", require("./project/resourceRoutes"));
 router.use("/projects", require("./project/projectRoutes"));
 
+// Dashboard and notifications
+router.use("/dashboard", require("./dashboard/dashboardRoutes"));
+router.use("/notifications", require("./notification/notificationRoutes"));
+
+// Settings and administration
+router.use("/settings/general", require("./settings/settingsRoutes"));
+router.use("/settings/integrations", require("./settings/integrationRoutes"));
+router.use("/settings/roles", require("./settings/roleRoutes"));
+router.use("/settings/users", require("./userRoutes"));
+
 module.exports = router;

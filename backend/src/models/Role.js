@@ -17,6 +17,15 @@ const roleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+roleSchema.set("toJSON", {
+  transform(_doc, ret) {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 const all = ["view", "create", "edit", "delete"];
 
 const DEFAULT_ROLES = [
