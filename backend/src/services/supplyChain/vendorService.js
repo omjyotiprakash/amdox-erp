@@ -3,13 +3,15 @@ const PurchaseOrder = require("../../models/supplyChain/PurchaseOrder");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const duplicateName = (err) => {
   if (err.code === 11000) throw new AppError(409, "A vendor with this name already exists");
   throw err;
 };
 
-const list = async ({ search, category, status }) => {
+const list = async ({ search, category, status, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (category && category !== "All") filter.category = category;
   if (status && status !== "All") filter.status = status;
@@ -17,15 +19,18 @@ const list = async ({ search, category, status }) => {
   if (clause) Object.assign(filter, clause);
 
   const [items, total, counts, categories] = await Promise.all([
-    Vendor.find(filter).sort({ code: 1 }).limit(500),
+    Vendor.find(filter).sort({ code: 1 }).skip(paging.skip).limit(paging.limit),
     Vendor.countDocuments(),
     Vendor.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     Vendor.distinct("category"),
   ]);
   const countOf = (status) => counts.find((row) => row._id === status)?.count || 0;
 
+  const matching = await Vendor.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     categories: categories.sort(),
     summary: { total, active: countOf("Active"), pending: countOf("Pending"), inactive: countOf("Inactive") },

@@ -1,8 +1,8 @@
 const poService = require("../../services/supplyChain/poService");
 
 const list = async (req, res) => {
-  const { search, status, vendorId } = req.query;
-  res.json({ success: true, data: await poService.list({ search, status, vendorId }) });
+  const { search, status, vendorId, page, limit } = req.query;
+  res.json({ success: true, data: await poService.list({ search, status, vendorId, page, limit }) });
 };
 
 const create = async (req, res) => {

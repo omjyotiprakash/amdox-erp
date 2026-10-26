@@ -4,11 +4,13 @@ const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter } = require("../../utils/common");
 const { matchingIds } = require("./employeeService");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const POPULATE = { path: "employee", select: "code name department" };
 
-const list = async ({ search, status }) => {
+const list = async ({ search, status, page, limit }) => {
+  const paging = parsePaging({ page, limit });
   const filter = {};
   if (status && status !== "All") filter.status = status;
 
@@ -19,14 +21,17 @@ const list = async ({ search, status }) => {
   }
 
   const [items, total, all] = await Promise.all([
-    Leave.find(filter).populate(POPULATE).sort({ from: -1, createdAt: -1 }).limit(500),
+    Leave.find(filter).populate(POPULATE).sort({ from: -1, createdAt: -1 }).skip(paging.skip).limit(paging.limit),
     Leave.countDocuments(),
     Leave.aggregate([{ $group: { _id: "$status", count: { $sum: 1 }, days: { $sum: "$days" } } }]),
   ]);
   const row = (status) => all.find((entry) => entry._id === status);
 
+  const matching = await Leave.countDocuments(filter);
+
   return {
     items,
+    ...pageInfo(paging, matching),
     total,
     summary: {
       total,

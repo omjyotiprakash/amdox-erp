@@ -3,6 +3,8 @@ import ErrorBanner from "../../components/common/ErrorBanner";
 import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
+import { usePage } from "../../hooks/usePagination";
+import Pagination from "../../components/common/Pagination";
 import {
   createPurchaseOrder,
   deletePurchaseOrder,
@@ -38,11 +40,12 @@ const PurchaseOrders = () => {
   const [actionError, setActionError] = useState("");
 
   const debouncedSearch = useDebounce(search);
+  const [page, setPage] = usePage([debouncedSearch, statusFilter, vendorFilter]);
   const { data, loading, error, reload } = useFetch(
-    () => fetchPurchaseOrders({ search: debouncedSearch, status: statusFilter, vendorId: vendorFilter }),
-    [debouncedSearch, statusFilter, vendorFilter]
+    () => fetchPurchaseOrders({ search: debouncedSearch, status: statusFilter, vendorId: vendorFilter, page }),
+    [debouncedSearch, statusFilter, vendorFilter, page]
   );
-  const { data: vendorData } = useFetch(() => fetchVendors({}), []);
+  const { data: vendorData } = useFetch(() => fetchVendors({ limit: 200 }), []);
 
   const orders = data?.items ?? [];
   const totals = data?.summary ?? { total: 0, totalValue: 0, pending: 0, delivered: 0 };
@@ -252,6 +255,7 @@ const PurchaseOrders = () => {
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
           Showing {orders.length} of {data?.total ?? 0} purchase orders. Cancelled orders are not counted in the total value.
         </div>
+        <Pagination page={data?.page} pages={data?.pages} matching={data?.matching} limit={data?.limit} onChange={setPage} />
       </section>
 
       {showForm && (

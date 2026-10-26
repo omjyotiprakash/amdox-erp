@@ -48,7 +48,7 @@ const ProjectDetail = () => {
   const [newMilestoneDate, setNewMilestoneDate] = useState("");
   const [actionError, setActionError] = useState("");
 
-  const { data: list, loading: listLoading, error: listError } = useFetch(() => fetchProjects({}), []);
+  const { data: list, loading: listLoading, error: listError } = useFetch(() => fetchProjects({ limit: 200 }), []);
   const { data, loading, error, reload } = useFetch(
     () => (id ? fetchProject(id) : Promise.resolve(null)),
     [id]

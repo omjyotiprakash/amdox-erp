@@ -1,8 +1,8 @@
 const employeeService = require("../../services/hr/employeeService");
 
 const list = async (req, res) => {
-  const { search, department, status } = req.query;
-  res.json({ success: true, data: await employeeService.list({ search, department, status }) });
+  const { search, department, status, page, limit } = req.query;
+  res.json({ success: true, data: await employeeService.list({ search, department, status, page, limit }) });
 };
 
 const create = async (req, res) => {

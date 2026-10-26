@@ -19,6 +19,8 @@ module.exports = {
   // No dev fallback in production: a guessable secret would let anyone forge tokens.
   jwtSecret: required("JWT_SECRET", isProduction ? undefined : "dev-only-insecure-secret-change-me"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
+  // Behind a hosting proxy (Render, Vercel) the real client IP is in X-Forwarded-For.
+  trustProxy: process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) : isProduction ? 1 : false,
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 12,
   corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:5173")
     .split(",")

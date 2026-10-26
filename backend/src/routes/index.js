@@ -36,5 +36,6 @@ router.use("/settings/general", require("./settings/settingsRoutes"));
 router.use("/settings/integrations", require("./settings/integrationRoutes"));
 router.use("/settings/roles", require("./settings/roleRoutes"));
 router.use("/settings/users", require("./userRoutes"));
+router.use("/settings/audit", require("./settings/auditRoutes"));
 
 module.exports = router;

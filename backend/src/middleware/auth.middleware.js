@@ -22,6 +22,10 @@ const authenticate = async (req, _res, next) => {
     throw new AppError(401, "Account not found or inactive");
   }
 
+  if ((payload.tv ?? 0) !== (user.tokenVersion || 0)) {
+    throw new AppError(401, "Your session has ended. Please sign in again.");
+  }
+
   req.user = user;
   next();
 };

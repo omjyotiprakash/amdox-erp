@@ -2,6 +2,7 @@ const Invoice = require("../../models/finance/Invoice");
 const Counter = require("../../models/Counter");
 const { AppError } = require("../../middleware/errorHandler.middleware");
 const { searchFilter, startOfTodayUTC } = require("./financeUtils");
+const { parsePaging, pageInfo } = require("../../utils/pagination");
 
 // Builds the service for one invoice direction ("payable" or "receivable").
 const createInvoiceService = (kind, codePrefix) => {
@@ -35,17 +36,19 @@ const createInvoiceService = (kind, codePrefix) => {
     return { outstanding: row?.outstanding || 0, paid: row?.paid || 0, overdueCount: row?.overdueCount || 0 };
   };
 
-  const list = async ({ search, status }) => {
+  const list = async ({ search, status, page, limit }) => {
+    const paging = parsePaging({ page, limit });
     const filter = { kind, ...statusFilter(status) };
     const searchClause = searchFilter(search, ["party", "invoiceNumber", "code"]);
     if (searchClause) Object.assign(filter, searchClause);
 
     const [items, total, summary] = await Promise.all([
-      Invoice.find(filter).sort({ dueDate: 1, createdAt: -1 }).limit(500),
+      Invoice.find(filter).sort({ dueDate: 1, createdAt: -1 }).skip(paging.skip).limit(paging.limit),
       Invoice.countDocuments({ kind }),
       summarize(),
     ]);
-    return { items, total, summary };
+    const matching = await Invoice.countDocuments(filter);
+    return { items, total, summary, ...pageInfo(paging, matching) };
   };
 
   const create = async (data, userId) =>

@@ -71,7 +71,10 @@ const update = async (id, { name, roleId, status, password }, actingUser) => {
   if (name !== undefined) user.name = name;
   if (roleId !== undefined) user.role = roleId;
   if (status !== undefined) user.status = status;
-  if (password !== undefined) user.passwordHash = await bcrypt.hash(password, env.bcryptRounds);
+  if (password !== undefined) {
+    user.passwordHash = await bcrypt.hash(password, env.bcryptRounds);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+  }
   await user.save();
   return user.populate(POPULATE);
 };

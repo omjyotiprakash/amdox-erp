@@ -3,6 +3,8 @@ import ErrorBanner from "../../components/common/ErrorBanner";
 import FormModal from "../../components/common/FormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useFetch } from "../../hooks/useFetch";
+import { usePage } from "../../hooks/usePagination";
+import Pagination from "../../components/common/Pagination";
 import { createVendor, deleteVendor, fetchVendors, updateVendor } from "../../services/supplyChainService";
 
 const statusStyle = {
@@ -29,9 +31,10 @@ const Vendors = () => {
   const [actionError, setActionError] = useState("");
 
   const debouncedSearch = useDebounce(search);
+  const [page, setPage] = usePage([debouncedSearch, categoryFilter, statusFilter]);
   const { data, loading, error, reload } = useFetch(
-    () => fetchVendors({ search: debouncedSearch, category: categoryFilter, status: statusFilter }),
-    [debouncedSearch, categoryFilter, statusFilter]
+    () => fetchVendors({ search: debouncedSearch, category: categoryFilter, status: statusFilter, page }),
+    [debouncedSearch, categoryFilter, statusFilter, page]
   );
 
   const vendors = data?.items ?? [];
@@ -233,6 +236,7 @@ const Vendors = () => {
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
           Showing {vendors.length} of {data?.total ?? 0} vendors
         </div>
+        <Pagination page={data?.page} pages={data?.pages} matching={data?.matching} limit={data?.limit} onChange={setPage} />
       </section>
 
       {form && (

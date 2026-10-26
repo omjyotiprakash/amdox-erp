@@ -1,8 +1,8 @@
 const ledgerService = require("../../services/finance/ledgerService");
 
 const list = async (req, res) => {
-  const { search, type, limit } = req.query;
-  const data = await ledgerService.list({ search, type, limit });
+  const { search, type, page, limit } = req.query;
+  const data = await ledgerService.list({ search, type, page, limit });
   res.json({ success: true, data });
 };
 

@@ -10,8 +10,13 @@ const login = async (req, res) => {
   res.json({ success: true, data: { user, token } });
 };
 
+const changePassword = async (req, res) => {
+  const { user, token } = await authService.changePassword(req.user._id, req.body);
+  res.json({ success: true, data: { user, token } });
+};
+
 const me = async (req, res) => {
   res.json({ success: true, data: { user: req.user } });
 };
 
-module.exports = { register, login, me };
+module.exports = { register, login, changePassword, me };

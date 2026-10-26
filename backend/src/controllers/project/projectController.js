@@ -1,8 +1,8 @@
 const projectService = require("../../services/project/projectService");
 
 const list = async (req, res) => {
-  const { search, status } = req.query;
-  res.json({ success: true, data: await projectService.list({ search, status }) });
+  const { search, status, page, limit } = req.query;
+  res.json({ success: true, data: await projectService.list({ search, status, page, limit }) });
 };
 
 const get = async (req, res) => {
