@@ -1,0 +1,84 @@
+AMDOX ERP - SUBMISSION GUIDE
+============================
+
+WHAT TO PASTE IN EACH BOX
+-------------------------
+1. Source Code   https://github.com/omjyotiprakash/amdox-erp
+2. Live          https://amdox-erp-psi.vercel.app
+3. Demo Video    (your YouTube "Unlisted" or Google Drive link - see script below)
+4. Feedback      (your YouTube "Unlisted" or Google Drive link - see script below)
+5. Report        https://github.com/omjyotiprakash/amdox-erp/blob/main/docs/AMDox_ERP_Project_Report.pdf
+
+Open every link in an incognito window before submitting to be sure it loads.
+For Google Drive: Share > General access > "Anyone with the link".
+
+
+BEFORE YOU SUBMIT (IMPORTANT)
+-----------------------------
+- Reviewers cannot sign up (sign-up is closed). Give them a login:
+  1. Settings > Roles & Permissions > New Role, name it "Reviewer".
+  2. Manage Permissions: tick only "View" for every module. Save.
+     (They can see every screen but cannot change or delete anything.)
+  3. Settings > User Management > Add User: Reviewer, reviewer@amdox.com,
+     a simple password, role "Reviewer".
+  4. Put the email and password in the submission notes (or in the README).
+- Add some sample data on the live site (employees, transactions, products,
+  a project) so the screens are not empty.
+- Open the live site a few minutes before reviewers do. The free server
+  sleeps and the first load can take about a minute.
+
+
+DEMO VIDEO SCRIPT (about 4-5 minutes)
+-------------------------------------
+Record the screen (OBS, or Windows: Win + G). Speak slowly.
+
+1. Intro (20 s)
+   "This is AMDox ERP, a web app to manage a company's finance, HR,
+   stock and projects in one place. It is built with React, Node.js,
+   Express and MongoDB, and it is live on Vercel and Render."
+2. Login and Dashboard (30 s)
+   Log in as Admin. Show the figures, the "Needs attention" list and the bell.
+3. Finance (45 s)
+   Ledger: add a transaction, show the totals change.
+   Payables: show an overdue invoice and "Mark as paid".
+   Reports: show the chart and "Export CSV".
+4. HR (60 s)
+   Employees: add an employee. Attendance: mark present.
+   Leave: create a request and approve it (mention: nobody can approve
+   their own leave). Payroll: Generate Payroll, mark one as paid.
+5. Supply Chain (40 s)
+   Inventory stock status, a purchase order moving Pending > Approved,
+   Forecasting with reorder suggestions.
+6. Projects (30 s)
+   Project details with milestones; Resource Planning (max 100% per person).
+7. Security (40 s)
+   Roles & Permissions: show a role. Log in as an Employee in a private
+   window: they only see their allowed pages and My Profile.
+   Show the Audit Log.
+8. Mobile (20 s)
+   Press F12 > phone icon (or use your phone): bottom tab bar,
+   slide-up popups, tables as cards.
+9. End (10 s)
+   "All modules work with real data, permissions are checked on the
+   server, and there are 120 automated tests. Thank you."
+
+
+FEEDBACK VIDEO - TALKING POINTS (about 2 minutes)
+-------------------------------------------------
+Speak in your own words, face camera or screen.
+
+- What I learned:
+  Building a full MERN app end to end; designing a REST API; MongoDB
+  models; login with JWT and role permissions checked on the server;
+  writing automated tests; deploying to Vercel, Render and Atlas;
+  making a website work like a mobile app.
+- Challenges I faced:
+  The first version only had sample data, so I built the backend and
+  connected every screen. Connecting three cloud services (CORS, env
+  variables). A "404 on reload" bug on Vercel. Making wide tables usable
+  on phones. Making approvals fair (no approving your own leave).
+- Key takeaways:
+  Plan the data and rules first. Security belongs on the server.
+  Tests make changes safe. Small branches and pull requests keep work clean.
+- Next steps:
+  Email notifications, real integrations, paid hosting, real user feedback.
